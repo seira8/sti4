@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>アドベントカレンダー 🎄</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#fdf3ee;--fg:#3a2226;--card:#c4302b;--card2:#1f6b4a;--open:#fff;--muted:#8a6f70;--gold:#e8b23a}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1b1416;--fg:#f6e9e6;--card:#a52a2a;--card2:#1a5c40;--open:#2b2023;--muted:#a58c8c}}
+:root[data-theme="dark"]{--bg:#1b1416;--fg:#f6e9e6;--card:#a52a2a;--card2:#1a5c40;--open:#2b2023;--muted:#a58c8c}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:"Hiragino Sans","Yu Gothic",Meiryo,sans-serif;text-align:center;padding:24px 14px 40px}
+h1{margin:0 0 4px;font-size:1.6rem}
+p.sub{margin:0 0 18px;color:var(--muted);font-size:.9rem}
+.grid{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.door{aspect-ratio:1;border:0;border-radius:12px;font-size:1.3rem;font-weight:700;color:#fff;background:var(--card);cursor:pointer;position:relative;box-shadow:0 2px 0 rgba(0,0,0,.2)}
+.door:nth-child(even){background:var(--card2)}
+.door.locked{opacity:.45;cursor:not-allowed}
+.door.locked::after{content:"🔒";position:absolute;right:4px;bottom:2px;font-size:.7rem}
+.door.ready{outline:3px solid var(--gold);animation:pulse 1.4s infinite}
+.door.opened{background:var(--open);color:var(--fg);border:2px solid var(--gold)}
+.door.shake{animation:shake .3s}
+@keyframes pulse{50%{transform:scale(1.05)}}
+@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.tools{margin-top:22px;font-size:.8rem;color:var(--muted)}
+.tools button{background:none;border:1px solid var(--muted);color:var(--muted);border-radius:8px;padding:4px 10px;cursor:pointer}
+#toast{min-height:1.4em;margin-top:12px;font-size:.9rem}
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:20px;z-index:9}
+#modal.show{display:flex}
+.box{background:var(--open);border-radius:16px;max-width:420px;width:100%;padding:20px;max-height:90%;overflow:auto}
+.box .pic{width:100%;aspect-ratio:4/3;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:5rem;background:linear-gradient(135deg,var(--card),var(--card2))}
+.box img{width:100%;border-radius:12px;display:block}
+.box h2{margin:14px 0 6px}
+.box p{margin:0 0 14px;line-height:1.7}
+.box button{background:var(--card);color:#fff;border:0;border-radius:10px;padding:8px 22px;font-size:1rem;cursor:pointer}
+</style>
+</head>
+<body>
+<h1>🎄 Advent Calendar 🎄</h1>
+<p class="sub">毎日ひとつずつ、12月の扉が開くよ</p>
+<div class="grid" id="grid"></div>
+<div id="toast"></div>
+<div class="tools"><button id="pv">👀 テストモード（全部開ける）</button></div>
+
+<div id="modal"><div class="box" id="box"></div></div>
+
+<script>
+// ===== ここを編集して中身を入れ替える =====
+const YEAR = 2026;   // 開催する年
+// img に画像(data:image/... のURL)を入れると写真表示。空なら emoji が表示される
+const CONTENT = [];
+const emojis=["⭐","🎁","🔔","🕯️","⛄","🦌","🍪","🎅","🧦","🎶","❄️","🍰","🧣","🎄","🛷","🍷","📖","🌟","🥂","🎀","🏠","🌙","🎂","👼","🎉"];
+for(let i=1;i<=25;i++){
+  CONTENT.push({title:i+"日目のプレゼント",text:"ここにメッセージを書こう！（"+i+"日目）",emoji:emojis[i-1],img:""});
+}
+// ==========================================
+
+const grid=document.getElementById('grid'),modal=document.getElementById('modal'),box=document.getElementById('box'),toast=document.getElementById('toast');
+let preview=false, opened={};
+try{opened=JSON.parse(localStorage.getItem('adv'+YEAR)||'{}')}catch(e){}
+const save=()=>{try{localStorage.setItem('adv'+YEAR,JSON.stringify(opened))}catch(e){}};
+const unlockDate=d=>new Date(YEAR,11,d,0,0,0);
+const isOpen=d=>preview||new Date()>=unlockDate(d);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function render(){
+  grid.innerHTML='';
+  const now=new Date();
+  CONTENT.forEach((c,i)=>{
+    const d=i+1,b=document.createElement('button');
+    b.className='door';b.textContent=d;
+    const ok=isOpen(d);
+    if(!ok)b.classList.add('locked');
+    else if(opened[d])b.classList.add('opened');
+    else b.classList.add('ready');
+    b.onclick=()=>{
+      if(!ok){
+        const days=Math.ceil((unlockDate(d)-now)/864e5);
+        toast.textContent=d+"日はまだ！あと"+days+"日で開くよ ⏳";
+        b.classList.remove('shake');void b.offsetWidth;b.classList.add('shake');return;
+      }
+      opened[d]=1;save();show(c);render();
+    };
+    grid.appendChild(b);
+  });
+}
+function show(c){
+  box.innerHTML=(c.img?'<img src="'+esc(c.img)+'" alt="">':'<div class="pic">'+c.emoji+'</div>')+
+   '<h2>'+esc(c.title)+'</h2><p>'+esc(c.text)+'</p><button id="cl">とじる</button>';
+  modal.classList.add('show');
+  document.getElementById('cl').onclick=()=>modal.classList.remove('show');
+}
+modal.onclick=e=>{if(e.target===modal)modal.classList.remove('show')};
+document.getElementById('pv').onclick=e=>{
+  preview=!preview;e.target.textContent=preview?'🔙 通常モードに戻す':'👀 テストモード（全部開ける）';
+  toast.textContent=preview?'テストモード中':'';render();
+};
+render();
+</script>
+</body>
+</html>
