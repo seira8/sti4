@@ -1,103 +1,619 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>アドベントカレンダー 🎄</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="キャラチャットのお話づくりに使える、お題ガチャ。">
+<title>お話ガチャ</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&family=Zen+Maru+Gothic:wght@500;700&display=swap">
 <style>
-:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
---bg:#fdf3ee;--fg:#3a2226;--card:#c4302b;--card2:#1f6b4a;--open:#fff;--muted:#8a6f70;--gold:#e8b23a}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1b1416;--fg:#f6e9e6;--card:#a52a2a;--card2:#1a5c40;--open:#2b2023;--muted:#a58c8c}}
-:root[data-theme="dark"]{--bg:#1b1416;--fg:#f6e9e6;--card:#a52a2a;--card2:#1a5c40;--open:#2b2023;--muted:#a58c8c}
-html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html{color-scheme:light}body{margin:0}[hidden]{display:none!important}img{max-width:100%}
+
+/* Layout: one capsule-toy machine in the middle; five slot windows stacked (the first opens a row of sub-capsules when locked), lever below, history + word editor underneath */
+:root{
+  --bg:#0a0a0a; --bg-a:#2b1233; --bg-b:#3d1219; --bg-c:#0f2140; --caps-op:.2; --page-ink:#f3eff6; --page-muted:#a8a2b4;
+  --machine:#e0452f; --machine-dark:#b5321f;
+  --panel:#fffdf8; --ink:#25313a; --muted:#5f6e78;
+  --cap1:#ffcf3f; --cap2:#ff8fb1; --cap3:#5fd0a3; --cap4:#6cb6ff; --cap5:#b892ff;
+  --neta:#ff6a3d; --neta-ink:#fff;
+  --line:#cdd8de; --sub-bg:#f3f6f8;
+  --f-display:"Mochiy Pop One","Hiragino Maru Gothic ProN","Zen Maru Gothic",sans-serif;
+  --f-body:"Zen Maru Gothic","Hiragino Maru Gothic ProN","Yu Gothic",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0a0a0a; --bg-a:#2b1233; --bg-b:#3d1219; --bg-c:#0f2140; --caps-op:.2; --page-ink:#f3eff6; --page-muted:#a8a2b4; --machine:#d2402b; --machine-dark:#8f2717;
+  --panel:#24303a; --ink:#eef3f6; --muted:#9fb0bb; --line:#3a4a57; --sub-bg:#1c2730; --neta:#ff7a50; --neta-ink:#1a0d06; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0a0a0a; --bg-a:#2b1233; --bg-b:#3d1219; --bg-c:#0f2140; --caps-op:.2; --page-ink:#f3eff6; --page-muted:#a8a2b4; --machine:#d2402b; --machine-dark:#8f2717;
+  --panel:#24303a; --ink:#eef3f6; --muted:#9fb0bb; --line:#3a4a57; --sub-bg:#1c2730; --neta:#ff7a50; --neta-ink:#1a0d06; color-scheme:dark}
+
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--fg);font-family:"Hiragino Sans","Yu Gothic",Meiryo,sans-serif;text-align:center;padding:24px 14px 40px}
-h1{margin:0 0 4px;font-size:1.6rem}
-p.sub{margin:0 0 18px;color:var(--muted);font-size:.9rem}
-.grid{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
-.door{aspect-ratio:1;border:0;border-radius:12px;font-size:1.3rem;font-weight:700;color:#fff;background:var(--card);cursor:pointer;position:relative;box-shadow:0 2px 0 rgba(0,0,0,.2)}
-.door:nth-child(even){background:var(--card2)}
-.door.locked{opacity:.45;cursor:not-allowed}
-.door.locked::after{content:"🔒";position:absolute;right:4px;bottom:2px;font-size:.7rem}
-.door.ready{outline:3px solid var(--gold);animation:pulse 1.4s infinite}
-.door.opened{background:var(--open);color:var(--fg);border:2px solid var(--gold)}
-.door.shake{animation:shake .3s}
-@keyframes pulse{50%{transform:scale(1.05)}}
-@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
-.tools{margin-top:22px;font-size:.8rem;color:var(--muted)}
-.tools button{background:none;border:1px solid var(--muted);color:var(--muted);border-radius:8px;padding:4px 10px;cursor:pointer}
-#toast{min-height:1.4em;margin-top:12px;font-size:.9rem}
-#modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:20px;z-index:9}
-#modal.show{display:flex}
-.box{background:var(--open);border-radius:16px;max-width:420px;width:100%;padding:20px;max-height:90%;overflow:auto}
-.box .pic{width:100%;aspect-ratio:4/3;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:5rem;background:linear-gradient(135deg,var(--card),var(--card2))}
-.box img{width:100%;border-radius:12px;display:block}
-.box h2{margin:14px 0 6px}
-.box p{margin:0 0 14px;line-height:1.7}
-.box button{background:var(--card);color:#fff;border:0;border-radius:10px;padding:8px 22px;font-size:1rem;cursor:pointer}
+.bgfx{position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(60% 50% at 15% 10%,var(--bg-a),transparent 70%),radial-gradient(55% 45% at 90% 30%,var(--bg-b),transparent 70%),radial-gradient(70% 50% at 50% 100%,var(--bg-c),transparent 70%),var(--bg)}
+.bgfx::before{content:"";position:absolute;inset:-260px;opacity:var(--caps-op);background-image:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='260' height='260'><g transform='translate(40 46) rotate(-20)'><path d='M-17 0a17 17 0 0 1 34 0z' fill='%23ffcf3f'/><path d='M-17 0a17 17 0 0 0 34 0z' fill='%23ffffff'/><circle r='17' fill='none' stroke='%2325313a' stroke-width='2.5'/><path d='M-17 0h34' stroke='%2325313a' stroke-width='2.5'/><circle cx='-6.8' cy='-7.7' r='3.1' fill='%23ffffff' opacity='.7'/></g><g transform='translate(150 30) rotate(35)'><path d='M-13 0a13 13 0 0 1 26 0z' fill='%23ff8fb1'/><path d='M-13 0a13 13 0 0 0 26 0z' fill='%23ffffff'/><circle r='13' fill='none' stroke='%2325313a' stroke-width='2.5'/><path d='M-13 0h26' stroke='%2325313a' stroke-width='2.5'/><circle cx='-5.2' cy='-5.9' r='2.3' fill='%23ffffff' opacity='.7'/></g><g transform='translate(210 120) rotate(-45)'><path d='M-19 0a19 19 0 0 1 38 0z' fill='%235fd0a3'/><path d='M-19 0a19 19 0 0 0 38 0z' fill='%23ffffff'/><circle r='19' fill='none' stroke='%2325313a' stroke-width='2.5'/><path d='M-19 0h38' stroke='%2325313a' stroke-width='2.5'/><circle cx='-7.6' cy='-8.6' r='3.4' fill='%23ffffff' opacity='.7'/></g><g transform='translate(95 140) rotate(15)'><path d='M-15 0a15 15 0 0 1 30 0z' fill='%236cb6ff'/><path d='M-15 0a15 15 0 0 0 30 0z' fill='%23ffffff'/><circle r='15' fill='none' stroke='%2325313a' stroke-width='2.5'/><path d='M-15 0h30' stroke='%2325313a' stroke-width='2.5'/><circle cx='-6.0' cy='-6.8' r='2.7' fill='%23ffffff' opacity='.7'/></g><g transform='translate(30 215) rotate(60)'><path d='M-13 0a13 13 0 0 1 26 0z' fill='%23b892ff'/><path d='M-13 0a13 13 0 0 0 26 0z' fill='%23ffffff'/><circle r='13' fill='none' stroke='%2325313a' stroke-width='2.5'/><path d='M-13 0h26' stroke='%2325313a' stroke-width='2.5'/><circle cx='-5.2' cy='-5.9' r='2.3' fill='%23ffffff' opacity='.7'/></g><g transform='translate(175 220) rotate(-10)'><path d='M-16 0a16 16 0 0 1 32 0z' fill='%23ffcf3f'/><path d='M-16 0a16 16 0 0 0 32 0z' fill='%23ffffff'/><circle r='16' fill='none' stroke='%2325313a' stroke-width='2.5'/><path d='M-16 0h32' stroke='%2325313a' stroke-width='2.5'/><circle cx='-6.4' cy='-7.2' r='2.9' fill='%23ffffff' opacity='.7'/></g><g transform='translate(250 10) rotate(20)'><path d='M-10 0a10 10 0 0 1 20 0z' fill='%236cb6ff'/><path d='M-10 0a10 10 0 0 0 20 0z' fill='%23ffffff'/><circle r='10' fill='none' stroke='%2325313a' stroke-width='2.5'/><path d='M-10 0h20' stroke='%2325313a' stroke-width='2.5'/><circle cx='-4.0' cy='-4.5' r='1.8' fill='%23ffffff' opacity='.7'/></g></svg>");background-size:260px 260px;
+  animation:drift 90s linear infinite}
+.bgfx::after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 35%,var(--bg) 100%);opacity:.55}
+@keyframes drift{to{transform:translate(260px,260px)}}
+@media (prefers-reduced-motion:reduce){.bgfx::before{animation:none}}
+body{background:var(--bg);
+  color:var(--ink);font-family:var(--f-body);font-weight:500;font-size:15px;line-height:1.7;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 48px}
+.wrap{max-width:560px;margin:0 auto;display:grid;gap:22px}
+
+header{text-align:center}
+h1{font-family:var(--f-display);font-weight:400;font-size:clamp(30px,8vw,42px);margin:0;letter-spacing:.04em;color:var(--machine);text-wrap:balance}
+header p{margin:2px 0 0;color:var(--page-muted);font-size:14px}
+
+.machine{background:var(--machine);border-radius:28px 28px 18px 18px;padding:20px 18px 22px;
+  box-shadow:0 8px 0 var(--machine-dark),0 18px 50px rgba(224,69,47,.25);display:grid;gap:14px}
+.dome{background:var(--panel);border-radius:18px;padding:18px 16px;display:grid;gap:10px;
+  box-shadow:inset 0 3px 0 rgba(0,0,0,.08)}
+.slot{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px}
+.ball{width:34px;height:34px;border-radius:50%;flex:none;position:relative;overflow:hidden;
+  background:linear-gradient(var(--c) 50%,var(--panel) 50%);box-shadow:inset 0 0 0 2.5px var(--ink)}
+.ball::after{content:"";position:absolute;left:0;right:0;top:calc(50% - 1.25px);height:2.5px;background:var(--ink)}
+.slot .box{min-width:0;border-bottom:2.5px dashed var(--line);padding:2px 2px 4px}
+.slot small{display:block;font-size:11px;letter-spacing:.12em;color:var(--muted);line-height:1.2}
+.slot .val{font-weight:700;font-size:clamp(16px,4.6vw,19px);line-height:1.4;word-break:break-word}
+.slot .val .p{color:var(--muted);font-weight:500;font-size:.85em;margin-left:2px}
+.slot .val .s{font-size:.8em;color:var(--muted);margin-left:2px}
+.tag{display:inline-block;vertical-align:2px;margin-left:6px;font-size:10px;line-height:1;padding:3px 5px;border-radius:5px;
+  background:var(--neta);color:var(--neta-ink);font-weight:700;letter-spacing:.06em}
+.slot.spin .val{filter:blur(.6px);opacity:.75}
+.lock{border:2px solid var(--line);background:transparent;color:var(--muted);border-radius:999px;
+  font:inherit;font-size:12px;font-weight:700;padding:3px 10px;cursor:pointer;white-space:nowrap}
+.lock[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--panel)}
+.lock:focus-visible,button:focus-visible,textarea:focus-visible{outline:3px solid var(--cap4);outline-offset:2px}
+
+/* sub-capsule tray under 攻略対象 */
+.subtray{margin:-2px 0 4px 44px;background:var(--sub-bg);border-radius:12px;padding:10px 10px 8px;display:grid;gap:6px}
+.subtray .hint{font-size:11px;color:var(--muted);line-height:1.4}
+.subs{display:flex;flex-wrap:wrap;gap:6px}
+.sub{min-width:46px;height:40px;padding:0 10px;border-radius:9px;border:2px solid var(--line);background:var(--panel);
+  color:var(--ink);font:inherit;font-weight:700;font-size:14px;cursor:pointer;position:relative;transition:background .1s,border-color .1s}
+.sub.on{background:var(--cap1);border-color:var(--ink);color:#3a2a00}
+.sub.pinned{box-shadow:0 0 0 2px var(--panel),0 0 0 4px var(--ink)}
+.sub.pinned::after{content:"固定";position:absolute;top:-9px;right:-6px;font-size:9px;line-height:1;background:var(--ink);color:var(--panel);padding:2px 4px;border-radius:4px}
+
+/* neta frequency switch */
+.netabar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;color:#fff;font-weight:700;font-size:13px}
+.seg{display:flex;background:var(--machine-dark);border-radius:999px;padding:3px;gap:2px}
+.seg button{border:none;background:transparent;color:#ffe3dc;font:inherit;font-size:13px;font-weight:700;padding:4px 12px;border-radius:999px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--panel);color:var(--ink)}
+
+.lever{display:flex;gap:10px;align-items:stretch}
+.spinbtn{flex:1;border:none;cursor:pointer;background:var(--cap1);color:#3a2a00;font-family:var(--f-display);
+  font-size:22px;padding:14px 10px;border-radius:999px;box-shadow:0 5px 0 #c99a10;transition:transform .08s,box-shadow .08s}
+.spinbtn:active{transform:translateY(4px);box-shadow:0 1px 0 #c99a10}
+.spinbtn .knob{display:inline-block;transition:transform .5s cubic-bezier(.3,1.6,.5,1)}
+.spinbtn.turn .knob{transform:rotate(360deg)}
+.copy{border:none;cursor:pointer;background:var(--panel);color:var(--ink);font:inherit;font-weight:700;
+  padding:0 16px;border-radius:999px;box-shadow:0 5px 0 var(--machine-dark)}
+.copy:active{transform:translateY(4px);box-shadow:0 1px 0 var(--machine-dark)}
+
+.result{background:var(--panel);border-radius:16px;padding:16px 18px;text-align:center;border:2.5px solid var(--ink)}
+.result .lbl{font-size:11px;letter-spacing:.14em;color:var(--muted)}
+.result .txt{font-family:var(--f-display);font-size:clamp(17px,4.8vw,21px);line-height:1.6;text-wrap:balance;margin-top:2px}
+
+section h2{font-family:var(--f-display);font-weight:400;font-size:17px;margin:0 0 8px;color:var(--page-ink)}
+.hist{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.hist li{background:var(--panel);border-radius:12px;padding:8px 12px;font-size:14px;display:flex;gap:8px;align-items:baseline}
+.hist li b{color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums;flex:none}
+.hist .empty{color:var(--page-muted);background:transparent;padding:0}
+.hist-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.hist-head h2{margin:0}
+.hist-head .count{font-family:var(--f-body);font-size:13px;color:var(--page-muted);font-weight:700}
+.hist-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap;color:var(--page-ink);font-size:13px;font-weight:700}
+.confirm{display:inline-flex;align-items:center;gap:6px}
+.hreset{border:2px solid var(--page-muted);background:transparent;color:var(--page-ink);font:inherit;font-size:12px;font-weight:700;padding:3px 12px;border-radius:999px;cursor:pointer}
+.hreset.danger{background:var(--machine);border-color:var(--machine);color:#fff}
+.hist li span{flex:1;min-width:0}
+.hcopy{border:none;background:transparent;color:var(--muted);font:inherit;font-size:12px;font-weight:700;cursor:pointer;padding:0 2px;flex:none}
+.hcopy:hover{color:var(--ink)}
+
+details{background:var(--panel);border-radius:16px;padding:12px 16px}
+summary{cursor:pointer;font-weight:700}
+.editor{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:12px}
+.editor label{display:grid;gap:4px;font-size:13px;font-weight:700;min-width:0;align-content:start}
+.editor label.wide{grid-column:1/-1}
+.editor .note{font-weight:500;color:var(--muted);font-size:12px}
+.editor textarea{width:100%;min-height:180px;resize:vertical;border:2px solid var(--line);border-radius:10px;
+  background:var(--sub-bg);color:var(--ink);font:inherit;font-size:14px;padding:8px;line-height:1.6}
+.editor-foot{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;font-size:13px;color:var(--muted)}
+.small{border:2px solid var(--line);background:transparent;color:var(--ink);font:inherit;font-size:13px;font-weight:700;
+  padding:4px 12px;border-radius:999px;cursor:pointer}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);
+  background:var(--ink);color:var(--panel);padding:8px 18px;border-radius:999px;font-weight:700;font-size:14px;
+  opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+@media (max-width:420px){.subtray{margin-left:0}}
+@media (prefers-reduced-motion:reduce){.spinbtn .knob{transition:none}}
 </style>
 </head>
 <body>
-<h1>🎄 Advent Calendar 🎄</h1>
-<p class="sub">毎日ひとつずつ、12月の扉が開くよ</p>
-<div class="grid" id="grid"></div>
-<div id="toast"></div>
-<div class="tools"><button id="pv">👀 テストモード（全部開ける）</button></div>
+<div class="wrap">
+  <header>
+    <h1>お話ガチャ</h1>
+    <p>キャラチャットのお話づくりに。レバーを回してお題を引こう</p>
+  </header>
 
-<div id="modal"><div class="box" id="box"></div></div>
+  <div class="machine">
+    <div class="dome" id="slots"></div>
+    <div class="lever">
+      <button class="spinbtn" id="spin" type="button"><span class="knob">◎</span> 回す！</button>
+      <button class="copy" id="copy" type="button">コピー</button>
+    </div>
+  </div>
+
+  <div class="result" aria-live="polite">
+    <div class="lbl">今日のお題</div>
+    <div class="txt" id="sentence"></div>
+  </div>
+
+  <section>
+    <div class="hist-head">
+      <h2>これまでのお題 <span class="count" id="hist-count"></span></h2>
+      <div class="hist-actions">
+        <button class="hreset" id="hist-reset" type="button">履歴をリセット</button>
+        <span class="confirm" id="hist-confirm" hidden>全部消しますか？
+          <button class="hreset danger" id="hist-yes" type="button">消す</button>
+          <button class="hreset" id="hist-no" type="button">やめる</button>
+        </span>
+      </div>
+    </div>
+    <ol class="hist" id="hist"><li class="empty">まだありません。回してみてください。</li></ol>
+  </section>
+
+  <details>
+    <summary>ことばを編集する</summary>
+    <div class="editor" id="editor"></div>
+    <div class="editor-foot">
+      <span>1行に1つ。このブラウザに保存されます。</span>
+      <button class="small" id="reset" type="button">最初のことばに戻す</button>
+    </div>
+  </details>
+</div>
+<div class="toast" id="toast"></div>
 
 <script>
-// ===== ここを編集して中身を入れ替える =====
-const YEAR = 2026;   // 開催する年
-// img に画像(data:image/... のURL)を入れると写真表示。空なら emoji が表示される
-const CONTENT = [];
-const emojis=["⭐","🎁","🔔","🕯️","⛄","🦌","🍪","🎅","🧦","🎶","❄️","🍰","🧣","🎄","🛷","🍷","📖","🌟","🥂","🎀","🏠","🌙","🎂","👼","🎉"];
-for(let i=1;i<=25;i++){
-  CONTENT.push({title:i+"日目のプレゼント",text:"ここにメッセージを書こう！（"+i+"日目）",emoji:emojis[i-1],img:""});
+// 「*」で始まるものはネタ枠
+const DEFAULT_CATS_TEXT=`人：男、女、多人数、？
+獣人：狼、猫、狐、兎、虎、熊、？
+宇宙人：人型、触手、不定形、機械生命体、？
+もふもふ：小動物、大型犬、毛玉、鳥、？
+モンスター：スライム、ゴーレム、ミミック、キメラ、？
+吸血鬼：真祖、元人間、混血、子供の姿、？
+悪魔：上級悪魔、インキュバス、サキュバス、契約悪魔、？
+天使：熾天使、堕天使、見習い、守護天使、？
+竜：人の姿になれる、子竜、古龍、竜騎士の相棒、？
+神様：土地神、死神、縁結びの神、邪神、？
+妖怪：九尾、鬼、天狗、河童、雪女、？
+幽霊：地縛霊、守護霊、生霊、記憶喪失、？
+人魚：人魚姫、半魚人、セイレーン、陸に上がった、？
+エルフ：ハイエルフ、ダークエルフ、ハーフエルフ、長老、？
+魔王：現役、引退、二代目、封印中、？
+勇者：現役、元勇者、偽物、勇者パーティー、？
+騎士：近衛騎士、聖騎士、黒騎士、落ちぶれた騎士、？
+魔法使い：天才、落ちこぼれ、魔法学園の教師、使い魔つき、？
+王族：王子、王女、皇帝、亡国の王子、？
+貴族：公爵、令嬢、悪役令嬢、没落貴族、？
+執事・メイド：執事、メイド、家令、新人、？
+マフィア：ボス、幹部、殺し屋、情報屋、？
+ヤクザ：組長、若頭、舎弟、組長の跡取り、？
+殺し屋：プロ、引退、見習い、二重スパイ、？
+軍人：大佐、新兵、傭兵、鬼教官、？
+刑事・探偵：刑事、名探偵、怪盗、助手、？
+医者：天才外科医、闇医者、保健室の先生、看護師、？
+教師：担任、塾講師、家庭教師、教育実習生、？
+生徒会長：完璧、腹黒、生徒会メンバー、元生徒会長、？
+不良：番長、一匹狼、優等生の裏の顔、ヤンキー集団、？
+転校生：謎めいた、帰国子女、人見知り、実は王族、？
+幼なじみ：隣の家、疎遠になった、年下、年上、？
+先輩・後輩：先輩、後輩、同期、バイト先、？
+上司・部下：社長、部長、新入社員、秘書、？
+アイドル：センター、地下アイドル、引退後、グループ、？
+俳優・配信者：俳優、VTuber、ゲーム実況者、インフルエンサー、？
+作家・芸術家：漫画家、小説家、画家、音楽家、？
+料理人：シェフ、パティシエ、居酒屋の店主、屋台、？
+スポーツ選手：エース、補欠、監督、引退した、？
+ヒーロー：現役、引退、闇落ち、候補生、？
+ヴィラン：ボス、幹部、改心中、下っ端、？
+アンドロイド：家庭用、戦闘用、試作品、感情あり、？
+AI：アシスタント、スマホの中、暴走中、量子コンピュータ、？
+サイボーグ：半分機械、全身義体、改造された、元人間、？
+忍者・侍：忍者、侍、浪人、くノ一、？
+武侠：剣客、門派の師匠、魔教教主、弟子、？
+海賊：船長、航海士、海軍、元海賊、？
+双子：兄弟、姉妹、男女、そっくり、？
+ルームメイト：大学の、シェアハウス、寮、突然の同居人、？
+婚約者：政略結婚、許嫁、契約結婚、元婚約者、？
+元恋人：別れた、再会、よりを戻したい、記憶喪失、？
+ヤンデレ：執着型、依存型、束縛型、無自覚、？
+髪の毛がちょっと気になる年頃の壮年男性：課長、社長、喫茶店のマスター、ちょい悪、？
+たわし：亀の子たわし、金たわし、スポンジつき、高級棕櫚たわし、？
+*自販機：缶、ペットボトル、アイス、おでん缶、？
+*喋る家具：椅子、冷蔵庫、こたつ、ベッド、？
+*食べ物の精：おにぎり、プリン、食パン、タピオカ、？
+*石：河原の石、宝石、隕石、漬物石、？
+*概念：月曜日、締め切り、眠気、Wi-Fi、？
+*植物：サボテン、観葉植物、盆栽、雑草、？
+*ゆるキャラ：着ぐるみ、中の人、ご当地、非公認、？`;
+
+const DEFAULT_WORDS=[null,
+`深夜のコンビニ
+廃校の音楽室
+雨の日の図書館
+月面基地
+夏祭りの屋台
+終電後の駅のホーム
+無人島
+雪山の山小屋
+商店街の古本屋
+豪華客船
+異世界の市場
+病院の屋上
+学園祭の前夜
+海辺の喫茶店
+エレベーターの中
+魔王城の厨房
+魔法学園
+王宮の舞踏会
+放課後の教室
+生徒会室
+夜の遊園地
+水族館
+満員電車
+雨宿りの軒下
+神社の境内
+古い洋館
+宇宙船
+地下闘技場
+マフィアのアジト
+組事務所
+高級ホテルのスイート
+社長室
+残業中のオフィス
+シェアハウス
+隣の部屋
+田舎の祖父母の家
+温泉旅館
+クリスマスの街
+桜並木
+ライブ会場の楽屋
+撮影スタジオ
+ゲームの世界
+時間の止まった街
+砂漠のオアシス
+海賊船
+山奥の道場
+戦場
+牢獄
+森の奥の小屋
+雲の上の神殿
+夢の中
+ラブホテル
+自宅
+ファンタジーの世界
+役所
+とあるお店
+*お題をクリアしないと出られない部屋
+*世紀末の世界`,
+`あなたを拾って
+あなたに一目惚れして
+あなたと体が入れ替わって
+あなたに嘘をついて
+あなたと契約を結んで
+あなたの秘密を知ってしまって
+あなたに弟子入りして
+あなたを誘拐して
+あなたに助けられて
+あなたと賭けをして
+記憶をなくして
+あなたの家に住みついて
+あなたに求婚して
+あなたと閉じ込められて
+あなたに正体を隠して
+あなたの護衛になって
+あなたに召喚されて
+あなたをスカウトして
+あなたと偽の恋人になって
+あなたの命を狙って
+あなたと同居することになって
+あなたに告白されて
+あなたと一緒に転生して
+あなたの落とした手紙を拾って
+あなたに呪いをかけられて
+あなたと手錠でつながれて
+あなたにだけ素顔を見せて
+あなたの専属になって
+あなたとの勝負に負けて
+あなたの夢に出てきて
+あなたと記憶を共有して
+あなたに名前をつけられて
+あなたの代わりに罰を受けて
+あなたを監視して
+あなたと逃亡して
+あなたを甘やかしすぎて
+あなたにケンカを売って
+あなたのクラスに転校してきて
+あなたの婚約者として現れて
+あなたと過去に戻って
+あなたに恩を返そうとして
+あなたの願いを3つ叶えることになって
+あなたに飼われて
+あなたと同じ夢を見て
+あなたの上司になって
+あなたと文通して
+あなたに料理を教わって
+あなたを守ると誓って
+あなたに嫉妬して
+あなたを忘れられなくて
+あなたを助けようとして
+あなたと友達になりたくて
+あなたを甘やかしたくて
+あなたをキューアグしたくて
+あなたを捕食したくて
+*あなたと筋肉で語り合って`,
+`世界を救う
+恋に落ちる
+友達になる
+大喧嘩する
+夢をかなえる
+伝説になる
+一緒に店を開く
+正体がばれる
+故郷に帰る
+すべてを失う
+誰にも言えなくなる
+結婚する
+指名手配される
+一緒に逃げる
+一晩だけ自由になる
+離れられなくなる
+国を乗っ取る
+世界を滅ぼしかける
+運命を変える
+呪いが解ける
+永遠を誓う
+記憶を取り戻す
+別れを選ぶ
+家族になる
+三角関係になる
+ライバルになる
+裏切られる
+復讐を果たす
+王座につく
+契約が切れる
+生まれ変わって再会する
+過去を清算する
+本当の名前を知る
+ハッピーエンドを迎える
+悲恋で終わる
+同じ一日をくり返す
+二人だけの秘密を持つ
+溺愛される
+依存しあう
+宿敵を倒す
+一緒に卒業する
+組織を抜ける
+優勝する
+共犯者になる
+約束を果たす
+新しい世界を作る
+相棒になる
+世間を騒がせる
+嘘が本当になる
+目が覚めるとすべて夢だった
+*なぜかラーメン屋を開く
+*町内会長に選ばれる
+*バズって炎上する
+*漫才コンビを組む
+*全員ムキムキになる
+*最終的に鍋をする
+*お互い敬語のまま50年たつ`,
+`恋愛
+ラブコメ
+コメディ
+シリアス
+昼ドラ
+ホラー
+バトル
+ファンタジー
+ロマンスファンタジー
+SF
+ミステリー
+サスペンス
+日常・ほのぼの
+青春
+学園
+切ない
+感動・泣ける
+ハートフル
+ダーク
+復讐劇
+ヤンデレ
+溺愛
+すれ違い
+ギャグ
+アクション
+武侠
+サバイバル
+BL
+GL
+時代劇
+大正浪漫
+デスゲーム
+スカッと系
+*登場人物が話すの禁止
+*ナレーションが全部ツッコむ`
+];
+
+const SLOTS=[
+ {key:"who",label:"攻略対象",part:"が",c:"var(--cap1)"},
+ {key:"where",label:"どこで",part:"で",c:"var(--cap2)"},
+ {key:"what",label:"なにをして",part:"",c:"var(--cap3)"},
+ {key:"how",label:"どうなる",part:"話",c:"var(--cap4)"},
+ {key:"genre",label:"はなし",part:"",c:"var(--cap5)"}
+];
+const lines=t=>t.split("\n").map(x=>x.trim().replace(/^[＊*]\s*/,"")).filter(Boolean);
+const isNeta=w=>w.startsWith("*");
+const clean=w=>String(w).replace(/^\*/,"");
+function textToCats(t){
+  return lines(t).map(l=>{
+    const m=l.split(/[：:]/);const name=m[0].trim();
+    const subs=(m.slice(1).join(":")||"").split(/[、,，]/).map(x=>x.trim()).filter(Boolean);
+    return {name,subs};
+  }).filter(c=>clean(c.name));
 }
-// ==========================================
+const catsToText=()=>CATS.map(c=>`${c.name}：${c.subs.join("、")}`).join("\n");
 
-const grid=document.getElementById('grid'),modal=document.getElementById('modal'),box=document.getElementById('box'),toast=document.getElementById('toast');
-let preview=false, opened={};
-try{opened=JSON.parse(localStorage.getItem('adv'+YEAR)||'{}')}catch(e){}
-const save=()=>{try{localStorage.setItem('adv'+YEAR,JSON.stringify(opened))}catch(e){}};
-const unlockDate=d=>new Date(YEAR,11,d,0,0,0);
-const isOpen=d=>preview||new Date()>=unlockDate(d);
-const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let CATS=textToCats(DEFAULT_CATS_TEXT);
+SLOTS.forEach((s,i)=>{if(i>0)s.words=lines(DEFAULT_WORDS[i])});
 
-function render(){
-  grid.innerHTML='';
-  const now=new Date();
-  CONTENT.forEach((c,i)=>{
-    const d=i+1,b=document.createElement('button');
-    b.className='door';b.textContent=d;
-    const ok=isOpen(d);
-    if(!ok)b.classList.add('locked');
-    else if(opened[d])b.classList.add('opened');
-    else b.classList.add('ready');
-    b.onclick=()=>{
-      if(!ok){
-        const days=Math.ceil((unlockDate(d)-now)/864e5);
-        toast.textContent=d+"日はまだ！あと"+days+"日で開くよ ⏳";
-        b.classList.remove('shake');void b.offsetWidth;b.classList.add('shake');return;
-      }
-      opened[d]=1;save();show(c);render();
-    };
-    grid.appendChild(b);
+const store={get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const KEY="odai-words-v5";
+const saved=store.get(KEY);
+if(saved){
+  if(Array.isArray(saved.cats)&&saved.cats.length)CATS=saved.cats;
+  if(Array.isArray(saved.words))saved.words.forEach((w,i)=>{if(i>0&&SLOTS[i]&&Array.isArray(w)&&w.length)SLOTS[i].words=w});
+}
+const save=()=>store.set(KEY,{cats:CATS,words:SLOTS.map(s=>s.words||null)});
+
+const state=SLOTS.map(()=>({val:"",locked:false}));
+state[0].sub=null; state[0].pinned=false;
+let history=store.get("odai-hist")||[];
+
+const rand=a=>a[Math.floor(Math.random()*a.length)];
+const pickAny=(arr,not)=>{if(!arr.length)return "？";if(arr.length<2)return arr[0];let v;do{v=rand(arr)}while(v===not);return v};
+const pickWeighted=pickAny;
+const words=i=>i===0?CATS.map(c=>c.name):SLOTS[i].words;
+const curCat=()=>CATS.find(c=>c.name===state[0].val)||{name:state[0].val,subs:[]};
+const esc=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+const slotsEl=document.getElementById("slots");
+SLOTS.forEach((s,i)=>{
+  const row=document.createElement("div");row.className="slot";row.style.setProperty("--c",s.c);
+  row.innerHTML=`<span class="ball" aria-hidden="true"></span><div class="box"><small>${s.label}</small><div class="val"></div></div><button class="lock" type="button" aria-pressed="false" id="lock-${s.key}">固定</button>`;
+  row.querySelector(".lock").onclick=()=>toggleLock(i);
+  slotsEl.appendChild(row);s.row=row;
+  if(i===0){
+    const tray=document.createElement("div");tray.className="subtray";tray.hidden=true;
+    tray.innerHTML=`<div class="subs" role="group" aria-label="細分化"></div><div class="hint">回すとこの中から1つ選ばれます。タップで固定、もう一度タップで解除。</div>`;
+    slotsEl.appendChild(tray);s.tray=tray;
+  }
+});
+
+function toggleLock(i){
+  const st=state[i];st.locked=!st.locked;
+  const b=SLOTS[i].row.querySelector(".lock");b.setAttribute("aria-pressed",st.locked);b.textContent=st.locked?"固定中":"固定";
+  if(i===0){
+    if(st.locked){st.sub=pickAny(curCat().subs);st.pinned=false}else{st.sub=null;st.pinned=false}
+    renderTray();paint(0);showSentence();
+  }
+}
+function renderTray(){
+  const s=SLOTS[0],st=state[0];
+  s.tray.hidden=!st.locked;
+  if(!st.locked)return;
+  const box=s.tray.querySelector(".subs");
+  box.innerHTML=curCat().subs.map((x,n)=>`<button type="button" class="sub" id="sub-${n}" data-v="${esc(x)}">${esc(x)}</button>`).join("");
+  box.querySelectorAll(".sub").forEach(b=>b.onclick=()=>{
+    const v=b.dataset.v;
+    if(st.pinned&&st.sub===v){st.pinned=false}else{st.sub=v;st.pinned=true}
+    markSubs();paint(0);showSentence();
+  });
+  markSubs();
+}
+function markSubs(){
+  SLOTS[0].tray.querySelectorAll(".sub").forEach(b=>{
+    const on=b.dataset.v===state[0].sub;
+    b.classList.toggle("on",on);b.classList.toggle("pinned",on&&state[0].pinned);
+    b.setAttribute("aria-pressed",on&&state[0].pinned);
   });
 }
-function show(c){
-  box.innerHTML=(c.img?'<img src="'+esc(c.img)+'" alt="">':'<div class="pic">'+c.emoji+'</div>')+
-   '<h2>'+esc(c.title)+'</h2><p>'+esc(c.text)+'</p><button id="cl">とじる</button>';
-  modal.classList.add('show');
-  document.getElementById('cl').onclick=()=>modal.classList.remove('show');
+const whoText=()=>clean(state[0].val)+(state[0].sub?`（${state[0].sub}）`:"");
+function paint(i){
+  const s=SLOTS[i],st=state[i];
+  const sub=i===0&&st.sub?`<span class="s">（${esc(st.sub)}）</span>`:"";
+  s.row.querySelector(".val").innerHTML=`${esc(clean(st.val))}${sub}<span class="p">${s.part}</span>`;
 }
-modal.onclick=e=>{if(e.target===modal)modal.classList.remove('show')};
-document.getElementById('pv').onclick=e=>{
-  preview=!preview;e.target.textContent=preview?'🔙 通常モードに戻す':'👀 テストモード（全部開ける）';
-  toast.textContent=preview?'テストモード中':'';render();
+const sentence=()=>`【${clean(state[4].val)}】${whoText()}が${clean(state[1].val)}で${clean(state[2].val)}${clean(state[3].val)}話。`;
+const showSentence=()=>document.getElementById("sentence").textContent=sentence();
+function renderHist(){
+  const el=document.getElementById("hist");
+  document.getElementById("hist-count").textContent=history.length?`${history.length}件`:"";
+  document.getElementById("hist-reset").disabled=!history.length;
+  if(!history.length){el.innerHTML='<li class="empty">まだありません。回してみてください。</li>';return}
+  el.innerHTML=history.map((h,n)=>`<li><b>${String(history.length-n).padStart(2,"0")}</b><span>${esc(h)}</span><button class="hcopy" type="button" data-i="${n}">コピー</button></li>`).join("");
+  el.querySelectorAll(".hcopy").forEach(b=>b.onclick=()=>copyText(history[+b.dataset.i]));
+}
+
+const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+let spinning=false;
+function roll(ticks,delay,onTick,onEnd){return new Promise(res=>{let t=0;const step=()=>{if(t>=ticks){onEnd();res();return}onTick();t++;setTimeout(step,delay+t*6)};step()})}
+function spin(){
+  if(spinning)return;spinning=true;
+  const btn=document.getElementById("spin");btn.classList.remove("turn");void btn.offsetWidth;btn.classList.add("turn");
+  const jobs=state.map((st,i)=>{
+    if(st.locked){
+      if(i===0&&!st.pinned){
+        const subs=curCat().subs,target=pickAny(subs,st.sub);
+        return roll(reduce?0:12,45,()=>{st.sub=pickAny(subs,st.sub);markSubs();paint(0)},()=>{st.sub=target;markSubs();paint(0)});
+      }
+      return Promise.resolve();
+    }
+    const row=SLOTS[i].row,list=words(i),target=pickWeighted(list,st.val);row.classList.add("spin");
+    return roll(reduce?0:8+i*4,45,()=>{st.val=pickAny(list,st.val);paint(i)},()=>{st.val=target;paint(i);row.classList.remove("spin")});
+  });
+  Promise.all(jobs).then(()=>{showSentence();history.unshift(sentence());history=history.slice(0,50);store.set("odai-hist",history);renderHist();spinning=false});
+}
+document.getElementById("spin").onclick=spin;
+
+
+const toastEl=document.getElementById("toast");let tt;
+function toast(m){toastEl.textContent=m;toastEl.classList.add("show");clearTimeout(tt);tt=setTimeout(()=>toastEl.classList.remove("show"),1500)}
+function copyText(t){
+  navigator.clipboard.writeText(t).then(()=>toast("コピーしました"),()=>{
+    const ta=document.createElement("textarea");ta.value=t;document.body.appendChild(ta);ta.select();
+    let ok=false;try{ok=document.execCommand("copy")}catch(e){}ta.remove();toast(ok?"コピーしました":"コピーできませんでした。長押しで選んでください")});
+}
+document.getElementById("copy").onclick=()=>copyText(sentence());
+const hc=document.getElementById("hist-confirm"),hr=document.getElementById("hist-reset");
+hr.onclick=()=>{hr.hidden=true;hc.hidden=false};
+document.getElementById("hist-no").onclick=()=>{hc.hidden=true;hr.hidden=false};
+document.getElementById("hist-yes").onclick=()=>{history=[];store.set("odai-hist",history);renderHist();hc.hidden=true;hr.hidden=false;toast("履歴をリセットしました")};
+
+const ed=document.getElementById("editor");
+const countText=(label,arr,unit)=>`${label}（${arr.length}${unit}）`;
+function buildEditor(){
+  ed.innerHTML="";
+  const l0=document.createElement("label");l0.className="wide";
+  l0.innerHTML=`<span></span><span class="note">「種類：細分化、細分化…」の形で1行に1つ。例）獣人：狼、猫、狐</span><textarea id="words-who"></textarea>`;
+  l0.firstChild.textContent=countText("攻略対象",CATS,"種類");
+  const t0=l0.querySelector("textarea");t0.value=catsToText();
+  t0.oninput=()=>{const c=textToCats(t0.value);if(c.length){CATS=c;l0.firstChild.textContent=countText("攻略対象",c,"種類");save();if(state[0].locked)renderTray()}};
+  ed.appendChild(l0);
+  SLOTS.forEach((s,i)=>{
+    if(i===0)return;
+    const l=document.createElement("label");l.innerHTML=`<span></span><textarea id="words-${s.key}"></textarea>`;
+    l.firstChild.textContent=countText(s.label,s.words,"個");
+    const ta=l.querySelector("textarea");ta.value=s.words.join("\n");
+    ta.oninput=()=>{const w=lines(ta.value);if(w.length){s.words=w;l.firstChild.textContent=countText(s.label,w,"個");save()}};
+    ed.appendChild(l);
+  });
+}
+document.getElementById("reset").onclick=()=>{
+  CATS=textToCats(DEFAULT_CATS_TEXT);SLOTS.forEach((s,i)=>{if(i>0)s.words=lines(DEFAULT_WORDS[i])});
+  try{localStorage.removeItem(KEY)}catch(e){}
+  buildEditor();if(state[0].locked)renderTray();toast("最初のことばに戻しました");
 };
-render();
+
+// 初期状態：すぐにお題が見えるように1回分を引いておく
+state.forEach((st,i)=>{st.val=pickWeighted(words(i));paint(i)});
+showSentence();renderHist();buildEditor();
 </script>
+
 </body>
 </html>
