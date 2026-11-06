@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>サインスタンプ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Kurenaido&family=Yomogi&family=Klee+One:wght@600&family=Caveat:wght@600&family=Dancing+Script:wght@600&family=Great+Vibes&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  :root{
+    --bg:#f6f3ee; --card:#fffdf9; --ink:#24211d; --sub:#6f6a62; --line:#e4ded4;
+    --accent:#c2462e; --accent-ink:#fff; --soft:#f1ebe2; --ok:#2f7a4f;
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"Zen Kaku Gothic New",system-ui,sans-serif;font-size:15px;line-height:1.6}
+  button,input,select{font:inherit;color:inherit}
+  .wrap{max-width:1120px;margin:0 auto;padding:22px 18px 60px}
+  header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+  h1{margin:0;font-size:26px;letter-spacing:.04em;font-weight:700}
+  h1 span{color:var(--accent)}
+  .tagline{margin:2px 0 0;color:var(--sub);font-size:13px}
+  .store-badge{font-size:12px;color:var(--sub);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:4px 12px;white-space:nowrap}
+  .store-badge.cloud{color:var(--ok);border-color:#cfe3d6}
+  .main{display:grid;gap:18px}
+  @media(min-width:900px){.main{grid-template-columns:360px 1fr;align-items:start}.side{position:sticky;top:16px}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+  .card + .card{margin-top:14px}
+  .card h2{margin:0 0 10px;font-size:15px;display:flex;align-items:center;gap:8px}
+  .num{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--ink);color:#fff;font-size:12px}
+  .hint{color:var(--sub);font-size:12.5px;margin:6px 0 0}
+  .checker{background-color:#fff;background-image:linear-gradient(45deg,#eee 25%,transparent 25%),linear-gradient(-45deg,#eee 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#eee 75%),linear-gradient(-45deg,transparent 75%,#eee 75%);background-size:14px 14px;background-position:0 0,0 7px,7px -7px,-7px 0}
+  .checker.dark{background-color:#3a3631;background-image:linear-gradient(45deg,#46413b 25%,transparent 25%),linear-gradient(-45deg,#46413b 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#46413b 75%),linear-gradient(-45deg,transparent 75%,#46413b 75%)}
+
+  /* signatures */
+  .sigs{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+  .sig{position:relative;border:2px solid var(--line);border-radius:10px;overflow:hidden;cursor:pointer;background:none;padding:0;text-align:left}
+  .sig.active{border-color:var(--accent)}
+  .sig .thumb{height:64px;display:grid;place-items:center;padding:6px}
+  .sig .thumb img{max-width:100%;max-height:52px}
+  .sig .name{font-size:12px;padding:3px 8px;border-top:1px solid var(--line);background:var(--card);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sig .del{position:absolute;top:4px;right:4px;border:none;background:rgba(255,255,255,.9);border-radius:999px;font-size:11px;padding:1px 7px;cursor:pointer;color:var(--sub);opacity:0;transition:.15s}
+  .sig:hover .del,.sig:focus-within .del,.sig .del.armed{opacity:1}
+  .sig .del.armed{background:var(--accent);color:#fff}
+  @media(hover:none){.sig .del{opacity:1}}
+  .sig.add{border-style:dashed;display:grid;place-items:center;min-height:92px;color:var(--sub);font-size:13px;background:transparent}
+  .sig.add:hover{border-color:var(--accent);color:var(--accent)}
+
+  /* controls */
+  .row{display:grid;grid-template-columns:76px 1fr 44px;align-items:center;gap:8px;margin:10px 0}
+  .row label{font-size:13px;color:var(--sub)}
+  .row output{font-size:12px;color:var(--sub);text-align:right;font-variant-numeric:tabular-nums}
+  input[type=range]{width:100%;accent-color:var(--accent)}
+  .posgrid{display:grid;grid-template-columns:repeat(3,30px);gap:4px}
+  .posgrid button{width:30px;height:24px;border:1px solid var(--line);background:var(--soft);border-radius:5px;cursor:pointer;padding:0;display:grid;place-items:center}
+  .posgrid button::after{content:"";width:7px;height:7px;border-radius:2px;background:#c9c1b4}
+  .posgrid button.on{background:var(--accent);border-color:var(--accent)}
+  .posgrid button.on::after{background:#fff}
+  .posrow{display:flex;gap:12px;align-items:center}
+  .custom-note{font-size:12px;color:var(--sub)}
+  .custom-note.on{color:var(--accent);font-weight:500}
+  .chips{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{border:1px solid var(--line);background:var(--soft);border-radius:999px;padding:3px 11px;font-size:12.5px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+  .chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .chip input[type=color]{width:18px;height:18px;border:none;padding:0;background:none;cursor:pointer}
+  .sw{width:12px;height:12px;border-radius:50%;border:1px solid #0003;display:inline-block}
+  .toggle{display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;user-select:none}
+  .toggle input{accent-color:var(--accent);width:16px;height:16px}
+
+  /* images */
+  .drop{border:2px dashed #d3cbbd;border-radius:var(--radius);padding:18px;text-align:center;color:var(--sub);cursor:pointer;transition:.15s;background:var(--card)}
+  .drop.over,.drop:hover{border-color:var(--accent);color:var(--accent);background:#fff8f4}
+  .drop strong{color:var(--ink);display:block;font-size:15px}
+  .thumbs{display:flex;gap:8px;overflow-x:auto;padding:10px 0 4px}
+  .thumbs:empty{display:none}
+  .th{position:relative;flex:0 0 auto;width:74px;height:74px;border-radius:9px;overflow:hidden;border:2px solid transparent;cursor:pointer;padding:0;background:#ddd}
+  .th img{width:100%;height:100%;object-fit:cover;display:block}
+  .th.active{border-color:var(--accent)}
+  .th .x{position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;border:none;background:rgba(0,0,0,.6);color:#fff;font-size:12px;line-height:20px;padding:0;cursor:pointer}
+  .stage{margin-top:12px;background:var(--soft);border-radius:var(--radius);min-height:280px;display:grid;place-items:center;padding:12px 12px 30px;position:relative}
+  #preview{display:block;max-width:100%;border-radius:4px;box-shadow:0 2px 14px #0002;touch-action:none;cursor:grab}
+  #preview.dragging{cursor:grabbing}
+  .empty{color:var(--sub);text-align:center;font-size:14px}
+  .stage .tip{position:absolute;bottom:8px;left:0;right:0;text-align:center;font-size:12px;color:var(--sub);pointer-events:none}
+  .actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:12px}
+  .btn{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:9px 16px;cursor:pointer;font-weight:500}
+  .btn:hover{border-color:#cfc6b8}
+  .btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+  .btn.primary:hover{filter:brightness(1.05)}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .btn.small{padding:5px 12px;font-size:13px}
+
+  /* modal */
+  .overlay{position:fixed;inset:0;background:rgba(30,25,20,.45);display:none;align-items:flex-start;justify-content:center;padding:24px 12px;overflow-y:auto;z-index:20}
+  .overlay.open{display:flex}
+  .modal{background:var(--card);border-radius:16px;width:100%;max-width:620px;padding:18px;box-shadow:0 20px 50px #0004}
+  .modal h3{margin:0 0 12px;font-size:17px;display:flex;justify-content:space-between;align-items:center}
+  .close{border:none;background:none;font-size:22px;line-height:1;cursor:pointer;color:var(--sub)}
+  .tabs{display:flex;gap:4px;background:var(--soft);padding:4px;border-radius:10px;margin-bottom:12px}
+  .tabs button{flex:1;border:none;background:none;padding:7px;border-radius:7px;cursor:pointer;font-size:14px;color:var(--sub)}
+  .tabs button.on{background:var(--card);color:var(--ink);font-weight:700;box-shadow:0 1px 3px #0001}
+  .pane{display:none}.pane.on{display:block}
+  .field{margin:10px 0}
+  .field > label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
+  .text-in{width:100%;border:1px solid var(--line);border-radius:9px;padding:8px 10px;background:#fff}
+  select.text-in{appearance:auto}
+  #drawPad{width:100%;height:200px;border:1px solid var(--line);border-radius:10px;background:#fff;touch-action:none;display:block;cursor:crosshair}
+  .regprev{height:120px;border-radius:10px;display:grid;place-items:center;margin-top:12px;border:1px solid var(--line);overflow:hidden}
+  .regprev canvas{max-width:92%;max-height:100px}
+  .regprev .ph{color:var(--sub);font-size:13px}
+  .modal .foot{display:flex;gap:10px;align-items:center;margin-top:14px}
+  .modal .foot .text-in{flex:1}
+  .upload-btn{display:flex;align-items:center;justify-content:center;gap:8px;border:2px dashed #d3cbbd;border-radius:10px;padding:16px;cursor:pointer;color:var(--sub);font-size:14px}
+  .upload-btn:hover{border-color:var(--accent);color:var(--accent)}
+  .result-list{display:grid;gap:12px}
+  .result-list img{width:100%;border-radius:8px;display:block}
+  .result-list figcaption{font-size:12px;color:var(--sub);margin-top:2px}
+
+  .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:9px 16px;border-radius:10px;font-size:13.5px;opacity:0;transition:.25s;pointer-events:none;z-index:30;max-width:90vw;text-align:center}
+  .toast.show{opacity:1;transform:translateX(-50%)}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+  /* ===== Monochrome theme ===== */
+  :root{
+    --bg:#f2f2f2; --card:#ffffff; --ink:#0a0a0a; --sub:#6b6b6b; --line:#e2e2e2;
+    --accent:#0a0a0a; --accent-ink:#fff; --soft:#f5f5f5; --ok:#0a0a0a; --radius:4px;
+  }
+  body{letter-spacing:.02em}
+  .wrap{padding-top:0}
+  header{background:var(--ink);color:#fff;margin:0 -18px 22px;padding:30px 28px 24px;align-items:flex-end}
+  @media(min-width:1156px){header{margin:0 0 22px;border-radius:0 0 var(--radius) var(--radius)}}
+  h1{font-family:"Inter Tight","Zen Kaku Gothic New",sans-serif;font-weight:800;font-size:34px;letter-spacing:.12em;line-height:1}
+  h1 span{color:#fff;font-weight:300}
+  .tagline{color:#a8a8a8;margin-top:10px;font-size:12.5px;letter-spacing:.08em}
+  .store-badge{background:transparent;color:#cfcfcf;border-color:#3a3a3a;border-radius:2px;font-size:11px;letter-spacing:.06em}
+  .store-badge.cloud{color:#fff;border-color:#fff}
+  .card{border-color:var(--line);box-shadow:none;padding:20px}
+  .card h2{font-family:"Inter Tight","Zen Kaku Gothic New",sans-serif;font-size:13px;letter-spacing:.14em;text-transform:uppercase;padding-bottom:12px;border-bottom:1px solid var(--line);margin-bottom:14px}
+  .card h2 small{font-family:"Zen Kaku Gothic New";font-weight:500;letter-spacing:.06em;color:var(--sub);text-transform:none;font-size:12px;margin-left:2px}
+  .num{border-radius:0;background:var(--ink);font-family:"Inter Tight";font-weight:700;width:24px;height:24px}
+  .sig{border:1px solid var(--line);border-radius:var(--radius)}
+  .sig.active{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
+  .sig .del{border-radius:2px}
+  .sig .del.armed{background:var(--ink)}
+  .sig.add{border:1px dashed #bdbdbd}
+  .sig.add:hover{border-color:var(--ink);color:var(--ink);background:var(--soft)}
+  .checker{background-image:linear-gradient(45deg,#f0f0f0 25%,transparent 25%),linear-gradient(-45deg,#f0f0f0 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#f0f0f0 75%),linear-gradient(-45deg,transparent 75%,#f0f0f0 75%)}
+  .checker.dark{background-color:#1c1c1c;background-image:linear-gradient(45deg,#262626 25%,transparent 25%),linear-gradient(-45deg,#262626 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#262626 75%),linear-gradient(-45deg,transparent 75%,#262626 75%)}
+  input[type=range]{accent-color:var(--ink)}
+  .posgrid button{border-radius:2px;background:#fff}
+  .posgrid button::after{background:#cfcfcf;border-radius:0}
+  .posgrid button.on{background:var(--ink);border-color:var(--ink)}
+  .custom-note.on{color:var(--ink);font-weight:700}
+  .chip{border-radius:2px;background:#fff}
+  .chip.on{background:var(--ink);border-color:var(--ink);color:#fff}
+  .toggle input{accent-color:var(--ink)}
+  .drop{border:1px dashed #bdbdbd;border-radius:var(--radius);padding:26px 18px}
+  .drop.over,.drop:hover{border-color:var(--ink);color:var(--ink);background:var(--soft)}
+  .drop strong{font-weight:700;letter-spacing:.06em}
+  .th{border-radius:2px;border:2px solid transparent}
+  .th.active{border-color:var(--ink)}
+  .th .x{border-radius:0;background:var(--ink)}
+  .stage{background:#e9e9e9;border-radius:var(--radius);background-image:radial-gradient(#d6d6d6 1px,transparent 1px);background-size:16px 16px}
+  #preview{border-radius:0;box-shadow:0 8px 30px rgba(0,0,0,.18)}
+  .btn{border-radius:2px;border-color:var(--ink);letter-spacing:.06em;padding:10px 18px}
+  .btn:hover{background:var(--soft);border-color:var(--ink)}
+  .btn.primary{background:var(--ink);color:#fff}
+  .btn.primary:hover{background:#2a2a2a;filter:none}
+  .btn.small{border-color:var(--line)}
+  .modal{border-radius:var(--radius)}
+  .modal h3{font-family:"Inter Tight","Zen Kaku Gothic New",sans-serif;letter-spacing:.08em}
+  .tabs{border-radius:2px;background:var(--soft)}
+  .tabs button{border-radius:2px}
+  .tabs button.on{background:var(--ink);color:#fff;box-shadow:none}
+  .text-in{border-radius:2px}
+  .text-in:focus{outline:1px solid var(--ink);border-color:var(--ink)}
+  #drawPad{border-radius:2px}
+  .regprev{border-radius:2px}
+  .upload-btn{border:1px dashed #bdbdbd;border-radius:2px}
+  .upload-btn:hover{border-color:var(--ink);color:var(--ink);background:var(--soft)}
+  .overlay{background:rgba(0,0,0,.6)}
+  .toast{border-radius:2px;letter-spacing:.04em}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>SIGN<span>STAMP</span></h1>
+      <p class="tagline">サインは一度登録すればOK。あとは画像を入れるだけ。</p>
+    </div>
+    <div class="store-badge" id="storeBadge">保存先を確認中…</div>
+  </header>
+
+  <div class="main">
+    <div class="side">
+      <section class="card">
+        <h2><span class="num">1</span>Signature<small>マイサイン</small></h2>
+        <div class="sigs" id="sigList"></div>
+        <p class="hint">使いたいサインをタップして選びます。</p>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">3</span>Adjust<small>位置と見た目</small></h2>
+        <div class="row" style="align-items:start">
+          <label style="padding-top:2px">位置</label>
+          <div class="posrow" style="grid-column:span 2">
+            <div class="posgrid" id="posGrid"></div>
+            <span class="custom-note" id="customNote">プレビューの<br>ドラッグでも動かせます</span>
+          </div>
+        </div>
+        <div class="row"><label for="size">大きさ</label><input type="range" id="size" min="5" max="90" step="1"><output id="sizeOut"></output></div>
+        <div class="row"><label for="margin">端からの余白</label><input type="range" id="margin" min="0" max="20" step="0.5"><output id="marginOut"></output></div>
+        <div class="row"><label for="opacity">濃さ</label><input type="range" id="opacity" min="10" max="100" step="1"><output id="opacityOut"></output></div>
+        <div class="row" style="align-items:start"><label style="padding-top:3px">色</label>
+          <div class="chips" id="colorChips" style="grid-column:span 2">
+            <button class="chip" data-c="orig">登録したまま</button>
+            <button class="chip" data-c="#111111"><span class="sw" style="background:#111"></span>黒</button>
+            <button class="chip" data-c="#ffffff"><span class="sw" style="background:#fff"></span>白</button>
+            <label class="chip" id="customChip"><input type="color" id="customColor" value="#808080">好きな色</label>
+          </div>
+        </div>
+        <div class="row"><label>影</label><label class="toggle" style="grid-column:span 2"><input type="checkbox" id="shadow">うっすら影をつける（明るい写真で見やすく）</label></div>
+        <p class="hint">設定はすべての画像に同じように適用されます。</p>
+      </section>
+    </div>
+
+    <div>
+      <section class="card">
+        <h2><span class="num">2</span>Images<small>画像を選ぶ</small></h2>
+        <div class="drop" id="drop" tabindex="0" role="button">
+          <strong>ここに画像をドロップ / タップして選択</strong>
+          複数枚まとめてOK・貼り付け（Ctrl+V）もできます
+        </div>
+        <input type="file" id="imgInput" accept="image/*" multiple class="sr">
+        <div class="thumbs" id="thumbs"></div>
+        <div class="stage" id="stage">
+          <div class="empty" id="emptyMsg">画像を入れるとここにプレビューが出ます</div>
+          <canvas id="preview" hidden></canvas>
+          <div class="tip" id="stageTip" hidden>サインをドラッグして位置を調整</div>
+        </div>
+        <div class="actions">
+          <span id="sizeInfo" style="margin-right:auto;align-self:center;font-size:12.5px;color:var(--sub)"></span>
+          <button class="btn" id="saveOne" disabled>この画像を保存</button>
+          <button class="btn primary" id="saveAll" disabled>すべて保存</button>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- Register modal -->
+<div class="overlay" id="regOverlay">
+  <div class="modal" role="dialog" aria-labelledby="regTitle">
+    <h3><span id="regTitle">サインを登録</span><button class="close" data-close="reg" aria-label="閉じる">×</button></h3>
+    <div class="tabs" id="regTabs">
+      <button data-tab="upload" class="on">画像から</button>
+      <button data-tab="draw">手書き</button>
+      <button data-tab="text">文字で</button>
+    </div>
+
+    <div class="pane on" data-pane="upload">
+      <label class="upload-btn" id="sigUploadLabel">
+        <input type="file" id="sigFile" accept="image/*" class="sr">
+        <span id="sigFileText">サインの画像を選ぶ（紙に書いて撮った写真でもOK）</span>
+      </label>
+      <div class="field">
+        <label class="toggle"><input type="checkbox" id="rmBg" checked>白い背景を透明にする</label>
+      </div>
+      <div class="row" id="thrRow"><label for="thr">背景の消し具合</label><input type="range" id="thr" min="80" max="250" value="190"><output id="thrOut"></output></div>
+      <div class="field">
+        <label>色</label>
+        <div class="chips" id="upColor">
+          <button class="chip on" data-c="orig">元のまま</button>
+          <button class="chip" data-c="#111111"><span class="sw" style="background:#111"></span>黒</button>
+          <button class="chip" data-c="#1d3a8a"><span class="sw" style="background:#1d3a8a"></span>紺</button>
+          <button class="chip" data-c="#ffffff"><span class="sw" style="background:#fff"></span>白</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="pane" data-pane="draw">
+      <canvas id="drawPad"></canvas>
+      <div style="display:flex;gap:10px;align-items:center;margin-top:8px;flex-wrap:wrap">
+        <div class="chips" id="penColor">
+          <button class="chip on" data-c="#111111"><span class="sw" style="background:#111"></span>黒</button>
+          <button class="chip" data-c="#1d3a8a"><span class="sw" style="background:#1d3a8a"></span>紺</button>
+          <button class="chip" data-c="#c2462e"><span class="sw" style="background:#c2462e"></span>赤</button>
+        </div>
+        <label style="font-size:13px;color:var(--sub);display:flex;align-items:center;gap:6px">太さ <input type="range" id="penW" min="1" max="12" value="4" style="width:90px"></label>
+        <button class="btn small" id="clearPad" style="margin-left:auto">消す</button>
+      </div>
+    </div>
+
+    <div class="pane" data-pane="text">
+      <div class="field"><label for="sigText">サインにする文字</label><input class="text-in" id="sigText" placeholder="例：Aiura / あいうら" maxlength="40"></div>
+      <div class="field"><label for="sigFont">書体</label>
+        <select class="text-in" id="sigFont">
+          <option value="Great Vibes">Great Vibes（筆記体）</option>
+          <option value="Dancing Script">Dancing Script（筆記体）</option>
+          <option value="Caveat">Caveat（手書き風）</option>
+          <option value="Zen Kurenaido">Zen Kurenaido（日本語・手書き）</option>
+          <option value="Yomogi">Yomogi（日本語・やわらか）</option>
+          <option value="Klee One">Klee One（日本語・ペン字）</option>
+        </select>
+      </div>
+      <div class="field"><label>色</label>
+        <div class="chips" id="textColor">
+          <button class="chip on" data-c="#111111"><span class="sw" style="background:#111"></span>黒</button>
+          <button class="chip" data-c="#1d3a8a"><span class="sw" style="background:#1d3a8a"></span>紺</button>
+          <button class="chip" data-c="#c2462e"><span class="sw" style="background:#c2462e"></span>赤</button>
+          <button class="chip" data-c="#ffffff"><span class="sw" style="background:#fff"></span>白</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="regprev checker" id="regPrevBox"><span class="ph" id="regPh">ここに仕上がりが表示されます</span><canvas id="regPrev" hidden></canvas></div>
+    <div class="foot">
+      <input class="text-in" id="sigName" placeholder="名前（例：いつものサイン）" maxlength="30">
+      <button class="btn primary" id="regSave" disabled>登録する</button>
+    </div>
+  </div>
+</div>
+
+<!-- Fallback result modal -->
+<div class="overlay" id="resOverlay">
+  <div class="modal">
+    <h3><span>できあがり</span><button class="close" data-close="res" aria-label="閉じる">×</button></h3>
+    <p class="hint" style="margin:0 0 10px">画像を<b>長押し</b>（スマホ）または<b>右クリック</b>（PC）して保存してください。</p>
+    <div class="result-list" id="resList"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  const $ = s => document.querySelector(s);
+  const LS_SIGS = 'signstamp.sigs.v1', LS_SET = 'signstamp.settings.v1';
+  const MAX_PIXELS = 16_000_000;
+
+  const S = {
+    sigs: [],
+    images: [],
+    current: -1,
+    settings: { sigId: null, anchor: 'br', size: 30, margin: 4, opacity: 90, color: 'orig', shadow: false, cx: 0.8, cy: 0.85 }
+  };
+  const sigImg = new Map();   // id -> HTMLImageElement
+  const tintCache = new Map(); // id|color -> canvas
+
+  // ---------- utils ----------
+  let toastT;
+  function toast(msg, ms = 2600) {
+    const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+    clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), ms);
+  }
+  const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  function mkCanvas(w, h) { const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(w)); c.height = Math.max(1, Math.round(h)); return c; }
+  function hexToRgb(h) { const n = parseInt(h.slice(1), 16); return { r: n >> 16 & 255, g: n >> 8 & 255, b: n & 255 }; }
+  function loadImg(src) { return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; }); }
+  async function fileToBitmap(file) {
+    try { return await createImageBitmap(file, { imageOrientation: 'from-image' }); }
+    catch (e) {
+      const url = URL.createObjectURL(file);
+      try { return await loadImg(url); } finally { setTimeout(() => URL.revokeObjectURL(url), 5000); }
+    }
+  }
+
+  // trim transparent edges + pad
+  function trimCanvas(c, pad = 6) {
+    const ctx = c.getContext('2d'); const { width: w, height: h } = c;
+    const d = ctx.getImageData(0, 0, w, h).data;
+    let x0 = w, y0 = h, x1 = -1, y1 = -1;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      if (d[(y * w + x) * 4 + 3] > 12) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    }
+    if (x1 < 0) return null;
+    x0 = Math.max(0, x0 - pad); y0 = Math.max(0, y0 - pad); x1 = Math.min(w - 1, x1 + pad); y1 = Math.min(h - 1, y1 + pad);
+    const out = mkCanvas(x1 - x0 + 1, y1 - y0 + 1);
+    out.getContext('2d').drawImage(c, x0, y0, out.width, out.height, 0, 0, out.width, out.height);
+    return out;
+  }
+  function scaleCanvas(c, k) {
+    const o = mkCanvas(c.width * k, c.height * k); const x = o.getContext('2d');
+    x.imageSmoothingQuality = 'high'; x.drawImage(c, 0, 0, o.width, o.height); return o;
+  }
+  // make a storable PNG (< ~240KB so it fits in one record)
+  function finalizeSig(c) {
+    const MAXD = 1000;
+    let cur = Math.max(c.width, c.height) > MAXD ? scaleCanvas(c, MAXD / Math.max(c.width, c.height)) : c;
+    let url = cur.toDataURL('image/png');
+    while (url.length > 240000 && cur.width > 120) { cur = scaleCanvas(cur, 0.8); url = cur.toDataURL('image/png'); }
+    return { png: url, w: cur.width, h: cur.height };
+  }
+
+  // ---------- storage ----------
+  const Store = {
+    mode: 'local', db: null, uid: null, setWriting: false, setPending: false, setT: null,
+    col() { return this.db.collection('data/users/' + this.uid); },
+    loadLocal() {
+      try { const a = JSON.parse(localStorage.getItem(LS_SIGS) || '[]'); if (Array.isArray(a)) S.sigs = a; } catch (e) {}
+      try { const s = JSON.parse(localStorage.getItem(LS_SET) || 'null'); if (s) Object.assign(S.settings, s); } catch (e) {}
+    },
+    saveLocal() {
+      try { localStorage.setItem(LS_SIGS, JSON.stringify(S.sigs)); } catch (e) {}
+      try { localStorage.setItem(LS_SET, JSON.stringify(S.settings)); } catch (e) {}
+    },
+    body(s) { return { name: s.name, png: s.png, w: s.w, h: s.h, created: s.created }; },
+    async initCloud() {
+      try {
+        if (!window.claude || typeof window.claude.use !== 'function') return badge();
+        const [db, user] = await Promise.all([window.claude.use('db'), window.claude.use('user')]);
+        if (!db || !user) return badge();
+        const id = await user.id();
+        if (!id) return badge();
+        this.db = db; this.uid = id;
+        const snap = await withTimeout(this.col().get(), 10000);
+        const cloud = []; let cloudSet = null;
+        snap.docs.forEach(d => {
+          if (!d.exists) return; const v = d.data() || {};
+          if (d.id.startsWith('sig-') && typeof v.png === 'string') cloud.push({ ...v, id: d.id });
+          else if (d.id === 'settings') cloudSet = v;
+        });
+        this.mode = 'cloud';
+        // upload signatures made on this device before the account store was reachable
+        const have = new Set(cloud.map(s => s.id));
+        for (const s of S.sigs) {
+          if (s.localOnly && !have.has(s.id)) {
+            try { await this.col().doc(s.id).set(this.body(s)); cloud.push({ ...s, localOnly: undefined }); } catch (e) {}
+          }
+        }
+        cloud.forEach(s => delete s.localOnly);
+        cloud.sort((a, b) => (a.created || 0) - (b.created || 0));
+        S.sigs = cloud;
+        if (cloudSet) Object.assign(S.settings, cloudSet);
+        this.saveLocal();
+        badge();
+        await refreshSigImages(); syncControls(); renderSigs(); renderPreview();
+        if (!S.sigs.length) openReg();
+      } catch (e) { console.warn('cloud store unavailable', e); this.mode = 'local'; badge(); }
+    },
+    async putSig(s) {
+      if (this.mode !== 'cloud') s.localOnly = true;
+      this.saveLocal();
+      if (this.mode === 'cloud') {
+        try { await this.col().doc(s.id).set(this.body(s)); }
+        catch (e) { s.localOnly = true; this.saveLocal(); toast('アカウントへの保存に失敗。この端末には保存しました'); }
+      }
+    },
+    async delSig(id) {
+      this.saveLocal();
+      if (this.mode === 'cloud') { try { await this.col().doc(id).delete(); } catch (e) {} }
+    },
+    saveSettings() {
+      clearTimeout(this.setT);
+      this.setT = setTimeout(async () => {
+        this.saveLocal();
+        if (this.mode !== 'cloud') return;
+        if (this.setWriting) { this.setPending = true; return; }
+        this.setWriting = true;
+        try { await this.col().doc('settings').set({ ...S.settings }); } catch (e) {}
+        this.setWriting = false;
+        if (this.setPending) { this.setPending = false; this.saveSettings(); }
+      }, 800);
+    }
+  };
+  function badge() {
+    const b = $('#storeBadge');
+    if (Store.mode === 'cloud') { b.textContent = '☁ アカウントに保存（どの端末でも同じサイン）'; b.classList.add('cloud'); }
+    else { b.textContent = 'このブラウザに保存'; b.classList.remove('cloud'); }
+  }
+
+  async function refreshSigImages() {
+    for (const s of S.sigs) {
+      if (!sigImg.has(s.id)) { try { sigImg.set(s.id, await loadImg(s.png)); } catch (e) {} }
+    }
+    if (!S.sigs.find(s => s.id === S.settings.sigId)) S.settings.sigId = S.sigs.length ? S.sigs[S.sigs.length - 1].id : null;
+  }
+  const activeSig = () => S.sigs.find(s => s.id === S.settings.sigId) || null;
+
+  // ---------- signature list ----------
+  function renderSigs() {
+    const box = $('#sigList'); box.innerHTML = '';
+    for (const s of S.sigs) {
+      const el = document.createElement('div');
+      el.className = 'sig' + (s.id === S.settings.sigId ? ' active' : '');
+      el.tabIndex = 0; el.setAttribute('role', 'button');
+      const light = isLightSig(s.id);
+      el.innerHTML = `<div class="thumb checker${light ? ' dark' : ''}"><img alt=""></div><div class="name"></div><button class="del" title="削除">削除</button>`;
+      el.querySelector('img').src = s.png;
+      el.querySelector('.name').textContent = s.name || 'サイン';
+      el.addEventListener('click', e => {
+        if (e.target.closest('.del')) return;
+        S.settings.sigId = s.id; Store.saveSettings(); renderSigs(); renderPreview();
+      });
+      el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); } });
+      const del = el.querySelector('.del');
+      del.addEventListener('click', async e => {
+        e.stopPropagation();
+        if (!del.classList.contains('armed')) {
+          del.classList.add('armed'); del.textContent = '本当に削除？';
+          setTimeout(() => { del.classList.remove('armed'); del.textContent = '削除'; }, 3000);
+          return;
+        }
+        S.sigs = S.sigs.filter(x => x.id !== s.id);
+        sigImg.delete(s.id);
+        [...tintCache.keys()].forEach(k => k.startsWith(s.id + '|') && tintCache.delete(k));
+        if (S.settings.sigId === s.id) S.settings.sigId = S.sigs.length ? S.sigs[S.sigs.length - 1].id : null;
+        await Store.delSig(s.id); Store.saveSettings();
+        renderSigs(); renderPreview(); toast('サインを削除しました');
+      });
+      box.appendChild(el);
+    }
+    const add = document.createElement('button');
+    add.className = 'sig add'; add.textContent = '＋ サインを登録';
+    add.addEventListener('click', openReg);
+    box.appendChild(add);
+  }
+  function isLightSig(id) {
+    const img = sigImg.get(id); if (!img) return false;
+    const c = mkCanvas(32, 32 * img.height / img.width || 8); const x = c.getContext('2d');
+    x.drawImage(img, 0, 0, c.width, c.height);
+    const d = x.getImageData(0, 0, c.width, c.height).data; let sum = 0, n = 0;
+    for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 80) { sum += d[i] * .3 + d[i + 1] * .59 + d[i + 2] * .11; n++; }
+    return n > 0 && sum / n > 200;
+  }
+
+  // ---------- compositing ----------
+  function sigCanvasFor(sig, color) {
+    const base = sigImg.get(sig.id); if (!base) return null;
+    if (!color || color === 'orig') return base;
+    const key = sig.id + '|' + color;
+    if (tintCache.has(key)) return tintCache.get(key);
+    const c = mkCanvas(base.naturalWidth, base.naturalHeight); const x = c.getContext('2d');
+    x.drawImage(base, 0, 0); x.globalCompositeOperation = 'source-in'; x.fillStyle = color; x.fillRect(0, 0, c.width, c.height);
+    tintCache.set(key, c); return c;
+  }
+  function sigRect(W, H, sig, st) {
+    const w = Math.min(W, H) * st.size / 100;
+    const h = w * sig.h / sig.w;
+    const m = Math.min(W, H) * st.margin / 100;
+    let x, y;
+    if (st.anchor === 'custom') { x = st.cx * W - w / 2; y = st.cy * H - h / 2; }
+    else {
+      const v = st.anchor[0], hz = st.anchor[1];
+      x = hz === 'l' ? m : hz === 'c' ? (W - w) / 2 : W - w - m;
+      y = v === 't' ? m : v === 'm' ? (H - h) / 2 : H - h - m;
+    }
+    return { x, y, w, h };
+  }
+  function drawComposite(ctx, src, W, H, sig, st) {
+    ctx.drawImage(src, 0, 0, W, H);
+    if (!sig) return;
+    const sc = sigCanvasFor(sig, st.color); if (!sc) return;
+    const r = sigRect(W, H, sig, st);
+    ctx.save();
+    ctx.globalAlpha = st.opacity / 100;
+    if (st.shadow) {
+      ctx.shadowColor = 'rgba(0,0,0,.45)';
+      ctx.shadowBlur = Math.max(2, r.h * 0.06);
+      ctx.shadowOffsetX = ctx.shadowOffsetY = Math.max(1, r.h * 0.02);
+    }
+    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(sc, r.x, r.y, r.w, r.h);
+    ctx.restore();
+  }
+
+  // ---------- images ----------
+  async function addFiles(files) {
+    const list = [...files].filter(f => f.type.startsWith('image/') || /\.(jpe?g|png|webp|gif|bmp|heic)$/i.test(f.name));
+    if (!list.length) return;
+    let failed = 0;
+    for (const f of list) {
+      try {
+        const bmp = await fileToBitmap(f);
+        const W = bmp.width || bmp.naturalWidth, H = bmp.height || bmp.naturalHeight;
+        const tc = mkCanvas(148, 148); const tx = tc.getContext('2d');
+        const k = Math.max(148 / W, 148 / H); tx.drawImage(bmp, (148 - W * k) / 2, (148 - H * k) / 2, W * k, H * k);
+        const type = f.type === 'image/png' ? 'image/png' : f.type === 'image/webp' ? 'image/webp' : 'image/jpeg';
+        S.images.push({ id: uid(), name: f.name || 'image', bmp, W, H, type, thumb: tc.toDataURL('image/jpeg', .8) });
+      } catch (e) { failed++; }
+    }
+    if (failed) toast(`${failed}枚の画像を読み込めませんでした（HEICはJPEGに変換してください）`, 4000);
+    if (S.current < 0 && S.images.length) S.current = 0;
+    else if (S.images.length) S.current = S.images.length - 1;
+    renderThumbs(); renderPreview();
+  }
+  function renderThumbs() {
+    const box = $('#thumbs'); box.innerHTML = '';
+    S.images.forEach((im, i) => {
+      const b = document.createElement('div');
+      b.className = 'th' + (i === S.current ? ' active' : '');
+      b.innerHTML = `<img alt=""><button class="x" aria-label="外す">×</button>`;
+      b.querySelector('img').src = im.thumb;
+      b.addEventListener('click', e => {
+        if (e.target.closest('.x')) {
+          S.images.splice(i, 1);
+          if (S.current >= S.images.length) S.current = S.images.length - 1;
+        } else S.current = i;
+        renderThumbs(); renderPreview();
+      });
+      box.appendChild(b);
+    });
+    const has = S.images.length > 0;
+    const cur = S.images[S.current];
+    $('#sizeInfo').textContent = cur ? `原寸 ${cur.W}×${cur.H}px のまま保存されます` : '';
+    $('#saveOne').disabled = !has;
+    $('#saveAll').disabled = !has;
+    $('#saveAll').textContent = S.images.length > 1 ? `すべて保存（${S.images.length}枚・ZIP）` : 'すべて保存';
+  }
+
+  // ---------- preview ----------
+  const pv = $('#preview');
+  let pvScale = 1, rafPending = false;
+  function renderPreview() {
+    if (rafPending) return; rafPending = true;
+    requestAnimationFrame(() => { rafPending = false; drawPreview(); });
+  }
+  function drawPreview() {
+    const im = S.images[S.current];
+    $('#emptyMsg').hidden = !!im; pv.hidden = !im; $('#stageTip').hidden = !im || !activeSig();
+    if (!im) { $('#emptyMsg').textContent = S.sigs.length ? '画像を入れるとここにプレビューが出ます' : 'まずは左の「サインを登録」から始めましょう'; return; }
+    const stage = $('#stage');
+    const maxW = stage.clientWidth - 24, maxH = Math.max(260, window.innerHeight * 0.62);
+    pvScale = Math.min(maxW / im.W, maxH / im.H, 1);
+    const dpr = window.devicePixelRatio || 1;
+    const cw = Math.round(im.W * pvScale), ch = Math.round(im.H * pvScale);
+    pv.style.width = cw + 'px'; pv.style.height = ch + 'px';
+    pv.width = Math.round(cw * dpr); pv.height = Math.round(ch * dpr);
+    const ctx = pv.getContext('2d');
+    ctx.setTransform(pvScale * dpr, 0, 0, pvScale * dpr, 0, 0);
+    drawComposite(ctx, im.bmp, im.W, im.H, activeSig(), S.settings);
+  }
+  window.addEventListener('resize', renderPreview);
+
+  // drag on preview
+  let drag = null;
+  function toImg(e) {
+    const im = S.images[S.current]; const r = pv.getBoundingClientRect();
+    return { x: (e.clientX - r.left) / r.width * im.W, y: (e.clientY - r.top) / r.height * im.H };
+  }
+  pv.addEventListener('pointerdown', e => {
+    const im = S.images[S.current], sig = activeSig(); if (!im || !sig) return;
+    const p = toImg(e); const r = sigRect(im.W, im.H, sig, S.settings);
+    const inside = p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
+    const off = inside ? { x: p.x - (r.x + r.w / 2), y: p.y - (r.y + r.h / 2) } : { x: 0, y: 0 };
+    drag = { off }; pv.setPointerCapture(e.pointerId); pv.classList.add('dragging');
+    moveTo(p);
+  });
+  pv.addEventListener('pointermove', e => { if (drag) moveTo(toImg(e)); });
+  const endDrag = () => { if (!drag) return; drag = null; pv.classList.remove('dragging'); Store.saveSettings(); };
+  pv.addEventListener('pointerup', endDrag); pv.addEventListener('pointercancel', endDrag);
+  function moveTo(p) {
+    const im = S.images[S.current];
+    S.settings.cx = Math.min(1, Math.max(0, (p.x - drag.off.x) / im.W));
+    S.settings.cy = Math.min(1, Math.max(0, (p.y - drag.off.y) / im.H));
+    S.settings.anchor = 'custom';
+    syncPos(); renderPreview();
+  }
+
+  // ---------- controls ----------
+  const anchors = ['tl', 'tc', 'tr', 'ml', 'mc', 'mr', 'bl', 'bc', 'br'];
+  const anchorLabels = { tl: '左上', tc: '上', tr: '右上', ml: '左', mc: '中央', mr: '右', bl: '左下', bc: '下', br: '右下' };
+  anchors.forEach(a => {
+    const b = document.createElement('button'); b.dataset.a = a; b.title = anchorLabels[a]; b.setAttribute('aria-label', anchorLabels[a]);
+    b.addEventListener('click', () => { S.settings.anchor = a; syncPos(); Store.saveSettings(); renderPreview(); });
+    $('#posGrid').appendChild(b);
+  });
+  function syncPos() {
+    document.querySelectorAll('#posGrid button').forEach(b => b.classList.toggle('on', b.dataset.a === S.settings.anchor));
+    const n = $('#customNote');
+    if (S.settings.anchor === 'custom') { n.innerHTML = '自由な位置<br>（ドラッグで調整中）'; n.classList.add('on'); }
+    else { n.innerHTML = 'プレビューの<br>ドラッグでも動かせます'; n.classList.remove('on'); }
+  }
+  const sliders = { size: v => v + '%', margin: v => v + '%', opacity: v => v + '%' };
+  Object.keys(sliders).forEach(k => {
+    const el = $('#' + k);
+    el.addEventListener('input', () => { S.settings[k] = +el.value; $('#' + k + 'Out').textContent = sliders[k](el.value); renderPreview(); Store.saveSettings(); });
+  });
+  $('#colorChips').addEventListener('click', e => {
+    const b = e.target.closest('.chip'); if (!b) return;
+    if (b.id === 'customChip') { S.settings.color = $('#customColor').value; }
+    else { e.preventDefault(); S.settings.color = b.dataset.c; }
+    syncColor(); renderPreview(); Store.saveSettings();
+  });
+  $('#customColor').addEventListener('input', e => { S.settings.color = e.target.value; syncColor(); renderPreview(); Store.saveSettings(); });
+  function syncColor() {
+    const c = S.settings.color; let matched = false;
+    document.querySelectorAll('#colorChips .chip').forEach(b => {
+      const on = b.dataset.c === c; if (on) matched = true; if (b.id !== 'customChip') b.classList.toggle('on', on);
+    });
+    $('#customChip').classList.toggle('on', !matched);
+    if (!matched && c && c[0] === '#') $('#customColor').value = c;
+  }
+  $('#shadow').addEventListener('change', e => { S.settings.shadow = e.target.checked; renderPreview(); Store.saveSettings(); });
+  function syncControls() {
+    Object.keys(sliders).forEach(k => { $('#' + k).value = S.settings[k]; $('#' + k + 'Out').textContent = sliders[k](S.settings[k]); });
+    $('#shadow').checked = !!S.settings.shadow; syncPos(); syncColor();
+  }
+
+  // image input
+  const drop = $('#drop'), imgInput = $('#imgInput');
+  drop.addEventListener('click', () => imgInput.click());
+  drop.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); imgInput.click(); } });
+  imgInput.addEventListener('change', () => { addFiles(imgInput.files); imgInput.value = ''; });
+  ['dragenter', 'dragover'].forEach(t => document.addEventListener(t, e => { e.preventDefault(); if (!regOpen()) drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(t => document.addEventListener(t, e => { e.preventDefault(); if (t === 'dragleave' && e.relatedTarget) return; drop.classList.remove('over'); }));
+  document.addEventListener('drop', e => {
+    if (!e.dataTransfer || !e.dataTransfer.files.length) return;
+    if (regOpen() && regTab === 'upload') loadSigFile(e.dataTransfer.files[0]);
+    else if (!regOpen()) addFiles(e.dataTransfer.files);
+  });
+  document.addEventListener('paste', e => {
+    const files = [...(e.clipboardData?.items || [])].filter(i => i.kind === 'file').map(i => i.getAsFile()).filter(Boolean);
+    if (!files.length) return;
+    if (regOpen() && regTab === 'upload') loadSigFile(files[0]); else if (!regOpen()) addFiles(files);
+  });
+
+  // ---------- export ----------
+  // Always renders at the original pixel size. Only if the browser can't handle
+  // a canvas that large (some phones) does it fall back to a smaller size, and says so.
+  async function renderAt(im, W, H) {
+    const c = mkCanvas(W, H); const ctx = c.getContext('2d');
+    if (!ctx) return null;
+    if (im.type === 'image/jpeg') { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H); }
+    drawComposite(ctx, im.bmp, W, H, activeSig(), S.settings);
+    const q = im.type === 'image/png' ? undefined : 0.97;
+    const blob = await new Promise(r => { try { c.toBlob(r, im.type, q); } catch (e) { r(null); } });
+    c.width = c.height = 1; // free memory
+    return blob;
+  }
+  async function renderBlob(im) {
+    let blob = null;
+    try { blob = await renderAt(im, im.W, im.H); } catch (e) { blob = null; }
+    if (blob) return blob;
+    const k = Math.sqrt(MAX_PIXELS / (im.W * im.H));
+    if (k < 1) {
+      blob = await renderAt(im, Math.floor(im.W * k), Math.floor(im.H * k));
+      if (blob) { toast(`この端末では原寸（${im.W}×${im.H}）を扱えないため、縮小して保存しました`, 4500); return blob; }
+    }
+    throw new Error('encode failed');
+  }
+  function outName(im, used) {
+    const ext = im.type === 'image/png' ? 'png' : im.type === 'image/webp' ? 'webp' : 'jpg';
+    let base = (im.name || 'image').replace(/\.[^.]+$/, '') + '_sign';
+    let name = base + '.' + ext, n = 2;
+    if (used) { while (used.has(name)) name = `${base}_${n++}.${ext}`; used.add(name); }
+    return name;
+  }
+  let downloadsNs;
+  async function getDownloads() {
+    if (downloadsNs !== undefined) return downloadsNs;
+    if (!(window.claude && window.claude.use)) {
+      // Opened as a normal website (e.g. GitHub Pages): save straight to the device.
+      downloadsNs = {
+        save: async ({ filename, data }) => {
+          const url = URL.createObjectURL(data);
+          const a = document.createElement('a'); a.href = url; a.download = filename;
+          document.body.appendChild(a); a.click(); a.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 60000);
+          return { status: 'saved' };
+        }
+      };
+      return downloadsNs;
+    }
+    try { downloadsNs = await window.claude.use('downloads'); } catch (e) { downloadsNs = null; }
+    return downloadsNs;
+  }
+  async function saveFile(filename, blob, fallbackItems) {
+    const dl = await getDownloads();
+    if (dl) {
+      try { await dl.save({ filename, data: blob }); toast('保存しました'); return; }
+      catch (e) {
+        if (e && e.code === 'declined') { toast('保存をキャンセルしました'); return; }
+        if (e && e.code === 'rate_limited') { toast('少し待ってからもう一度お試しください'); return; }
+      }
+    }
+    showFallback(fallbackItems);
+  }
+  function showFallback(items) {
+    const list = $('#resList'); list.innerHTML = '';
+    items.forEach(({ name, blob }) => {
+      const f = document.createElement('figure'); f.style.margin = 0;
+      const img = document.createElement('img'); img.src = URL.createObjectURL(blob); img.alt = name;
+      const cap = document.createElement('figcaption'); cap.textContent = name;
+      f.append(img, cap); list.appendChild(f);
+    });
+    $('#resOverlay').classList.add('open');
+  }
+  function needSig() { if (!activeSig()) { toast('先にサインを登録・選択してください'); return true; } return false; }
+  $('#saveOne').addEventListener('click', async () => {
+    const im = S.images[S.current]; if (!im || needSig()) return;
+    const btn = $('#saveOne'); btn.disabled = true;
+    try { const blob = await renderBlob(im); const name = outName(im); await saveFile(name, blob, [{ name, blob }]); }
+    catch (e) { toast('画像の書き出しに失敗しました'); }
+    btn.disabled = false;
+  });
+  $('#saveAll').addEventListener('click', async () => {
+    if (!S.images.length || needSig()) return;
+    const btn = $('#saveAll'), label = btn.textContent; btn.disabled = true;
+    try {
+      const used = new Set(), items = [];
+      for (let i = 0; i < S.images.length; i++) {
+        btn.textContent = `作成中… ${i + 1}/${S.images.length}`;
+        const im = S.images[i]; items.push({ name: outName(im, used), blob: await renderBlob(im) });
+      }
+      if (items.length === 1) await saveFile(items[0].name, items[0].blob, items);
+      else if (window.JSZip) {
+        btn.textContent = 'ZIPにまとめ中…';
+        const zip = new JSZip(); items.forEach(it => zip.file(it.name, it.blob));
+        const zblob = await zip.generateAsync({ type: 'blob', compression: 'STORE' });
+        const d = new Date(); const stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+        const dl = await getDownloads();
+        if (dl) {
+          try { await dl.save({ filename: `signed_images_${stamp}.zip`, data: zblob }); toast(`${items.length}枚をZIPで保存しました`); }
+          catch (e) { if (e && e.code === 'declined') toast('保存をキャンセルしました'); else showFallback(items); }
+        } else showFallback(items);
+      } else showFallback(items);
+    } catch (e) { toast('画像の書き出しに失敗しました'); }
+    btn.disabled = false; btn.textContent = label;
+  });
+
+  // ---------- register modal ----------
+  let regTab = 'upload';
+  const reg = { srcBmp: null, upColor: 'orig', penColor: '#111111', textColor: '#111111', drawn: false, result: null };
+  const regOpen = () => $('#regOverlay').classList.contains('open');
+  function openReg() {
+    $('#regOverlay').classList.add('open');
+    $('#sigName').value = '';
+    setTimeout(sizePad, 30);
+    updateRegPreview();
+  }
+  document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => {
+    $(b.dataset.close === 'reg' ? '#regOverlay' : '#resOverlay').classList.remove('open');
+  }));
+  document.querySelectorAll('.overlay').forEach(o => o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); }));
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.overlay.open').forEach(o => o.classList.remove('open')); });
+
+  $('#regTabs').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    regTab = b.dataset.tab;
+    document.querySelectorAll('#regTabs button').forEach(x => x.classList.toggle('on', x === b));
+    document.querySelectorAll('.pane').forEach(p => p.classList.toggle('on', p.dataset.pane === regTab));
+    if (regTab === 'draw') setTimeout(sizePad, 0);
+    updateRegPreview();
+  });
+  function chipGroup(sel, key) {
+    $(sel).addEventListener('click', e => {
+      const b = e.target.closest('.chip'); if (!b) return;
+      reg[key] = b.dataset.c;
+      $(sel).querySelectorAll('.chip').forEach(x => x.classList.toggle('on', x === b));
+      if (key === 'penColor') return;
+      updateRegPreview();
+    });
+  }
+  chipGroup('#upColor', 'upColor'); chipGroup('#penColor', 'penColor'); chipGroup('#textColor', 'textColor');
+
+  // upload
+  async function loadSigFile(f) {
+    if (!f) return;
+    try { reg.srcBmp = await fileToBitmap(f); $('#sigFileText').textContent = '✓ ' + (f.name || '画像') + '（タップで選び直し）'; }
+    catch (e) { toast('この画像は読み込めませんでした'); return; }
+    if (!$('#sigName').value) $('#sigName').value = (f.name || '').replace(/\.[^.]+$/, '').slice(0, 30);
+    updateRegPreview();
+  }
+  $('#sigFile').addEventListener('change', e => { loadSigFile(e.target.files[0]); e.target.value = ''; });
+  $('#rmBg').addEventListener('change', () => { $('#thrRow').style.opacity = $('#rmBg').checked ? 1 : .4; updateRegPreview(); });
+  $('#thr').addEventListener('input', () => { $('#thrOut').textContent = $('#thr').value; updateRegPreview(); });
+  $('#thrOut').textContent = $('#thr').value;
+
+  function buildFromUpload() {
+    const bmp = reg.srcBmp; if (!bmp) return null;
+    const sw = bmp.width || bmp.naturalWidth, sh = bmp.height || bmp.naturalHeight;
+    const k = Math.min(1, 1600 / Math.max(sw, sh));
+    const c = mkCanvas(sw * k, sh * k); const x = c.getContext('2d', { willReadFrequently: true });
+    x.drawImage(bmp, 0, 0, c.width, c.height);
+    const id = x.getImageData(0, 0, c.width, c.height), d = id.data;
+    const rm = $('#rmBg').checked, thr = +$('#thr').value, soft = 45;
+    const col = reg.upColor !== 'orig' ? hexToRgb(reg.upColor) : null;
+    for (let i = 0; i < d.length; i += 4) {
+      let a = d[i + 3];
+      if (rm) {
+        const lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+        a = a * Math.min(1, Math.max(0, (thr - lum) / soft));
+      }
+      if (col) { d[i] = col.r; d[i + 1] = col.g; d[i + 2] = col.b; }
+      d[i + 3] = a;
+    }
+    x.putImageData(id, 0, 0);
+    return trimCanvas(c, 4);
+  }
+
+  // draw
+  const pad = $('#drawPad'); let padCtx = pad.getContext('2d'), drawing = false, last = null;
+  function sizePad() {
+    const r = pad.getBoundingClientRect(); if (!r.width) return;
+    const w = Math.round(r.width * 2), h = Math.round(r.height * 2);
+    if (pad.width === w && pad.height === h) return;
+    const old = reg.drawn ? (() => { const c = mkCanvas(pad.width, pad.height); c.getContext('2d').drawImage(pad, 0, 0); return c; })() : null;
+    pad.width = w; pad.height = h; padCtx = pad.getContext('2d');
+    if (old) padCtx.drawImage(old, 0, 0, w, h);
+  }
+  const padPt = e => { const r = pad.getBoundingClientRect(); return { x: (e.clientX - r.left) * pad.width / r.width, y: (e.clientY - r.top) * pad.height / r.height }; };
+  pad.addEventListener('pointerdown', e => { sizePad(); drawing = true; last = padPt(e); pad.setPointerCapture(e.pointerId); dot(last); });
+  pad.addEventListener('pointermove', e => {
+    if (!drawing) return;
+    const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+    for (const ev of evs) { const p = padPt(ev); line(last, p); last = p; }
+  });
+  const endPad = () => { if (drawing) { drawing = false; updateRegPreview(); } };
+  pad.addEventListener('pointerup', endPad); pad.addEventListener('pointercancel', endPad);
+  function penW() { return +$('#penW').value * 2.2; }
+  function dot(p) { padCtx.fillStyle = reg.penColor; padCtx.beginPath(); padCtx.arc(p.x, p.y, penW() / 2, 0, Math.PI * 2); padCtx.fill(); reg.drawn = true; }
+  function line(a, b) {
+    padCtx.strokeStyle = reg.penColor; padCtx.lineWidth = penW(); padCtx.lineCap = 'round'; padCtx.lineJoin = 'round';
+    padCtx.beginPath(); padCtx.moveTo(a.x, a.y); padCtx.lineTo(b.x, b.y); padCtx.stroke(); reg.drawn = true;
+  }
+  $('#clearPad').addEventListener('click', () => { padCtx.clearRect(0, 0, pad.width, pad.height); reg.drawn = false; updateRegPreview(); });
+  function buildFromDraw() {
+    if (!reg.drawn) return null;
+    const c = mkCanvas(pad.width, pad.height); c.getContext('2d').drawImage(pad, 0, 0);
+    return trimCanvas(c, 6);
+  }
+
+  // text
+  $('#sigText').addEventListener('input', updateRegPreview);
+  $('#sigFont').addEventListener('change', updateRegPreview);
+  async function buildFromText() {
+    const t = $('#sigText').value.trim(); if (!t) return null;
+    const font = $('#sigFont').value, px = 180;
+    try { await withTimeout(document.fonts.load(`${px}px "${font}"`, t), 3000); } catch (e) {}
+    const c = mkCanvas(Math.min(6000, px * (t.length + 2) * 1.1), px * 2); const x = c.getContext('2d');
+    x.font = `${px}px "${font}"`; x.fillStyle = reg.textColor; x.textBaseline = 'middle';
+    x.fillText(t, px * 0.5, c.height / 2);
+    return trimCanvas(c, 8);
+  }
+
+  let regBusy = 0;
+  async function updateRegPreview() {
+    const my = ++regBusy;
+    let c = null;
+    try {
+      if (regTab === 'upload') c = buildFromUpload();
+      else if (regTab === 'draw') c = buildFromDraw();
+      else c = await buildFromText();
+    } catch (e) { c = null; }
+    if (my !== regBusy) return;
+    reg.result = c;
+    const pc = $('#regPrev');
+    $('#regPh').hidden = !!c; pc.hidden = !c;
+    $('#regSave').disabled = !c;
+    if (!c) {
+      $('#regPh').textContent = regTab === 'upload' ? 'サイン画像を選ぶとここに仕上がりが出ます' : regTab === 'draw' ? '上の枠に指やマウスでサインを書いてください' : '文字を入力してください';
+      $('#regPrevBox').classList.remove('dark'); return;
+    }
+    pc.width = c.width; pc.height = c.height; pc.getContext('2d').drawImage(c, 0, 0);
+    // dark checker if the signature is light-coloured
+    const tc = mkCanvas(40, Math.max(4, 40 * c.height / c.width)); const tx = tc.getContext('2d'); tx.drawImage(c, 0, 0, tc.width, tc.height);
+    const d = tx.getImageData(0, 0, tc.width, tc.height).data; let s = 0, n = 0;
+    for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 80) { s += d[i] * .3 + d[i + 1] * .59 + d[i + 2] * .11; n++; }
+    $('#regPrevBox').classList.toggle('dark', n > 0 && s / n > 200);
+  }
+
+  $('#regSave').addEventListener('click', async () => {
+    const c = reg.result; if (!c) return;
+    const btn = $('#regSave'); btn.disabled = true;
+    const f = finalizeSig(c);
+    const name = $('#sigName').value.trim() || (regTab === 'text' ? $('#sigText').value.trim() : '') || `サイン${S.sigs.length + 1}`;
+    const s = { id: 'sig-' + uid(), name: name.slice(0, 30), png: f.png, w: f.w, h: f.h, created: Date.now() };
+    S.sigs.push(s);
+    try { sigImg.set(s.id, await loadImg(s.png)); } catch (e) {}
+    S.settings.sigId = s.id;
+    await Store.putSig(s); Store.saveSettings();
+    renderSigs(); renderPreview();
+    $('#regOverlay').classList.remove('open');
+    // reset
+    reg.srcBmp = null; $('#sigFileText').textContent = 'サインの画像を選ぶ（紙に書いて撮った写真でもOK）';
+    padCtx.clearRect(0, 0, pad.width, pad.height); reg.drawn = false; $('#sigText').value = '';
+    btn.disabled = false;
+    toast(Store.mode === 'cloud' ? 'サインを登録しました。次回からはそのまま使えます' : 'サインを登録しました（このブラウザに保存）');
+  });
+
+  // ---------- boot ----------
+  Store.loadLocal();
+  syncControls(); badge();
+  refreshSigImages().then(() => { renderSigs(); renderPreview(); });
+  $('#storeBadge').textContent = '保存先を確認中…';
+  Store.initCloud();
+})();
+</script>
+</body>
+</html>
