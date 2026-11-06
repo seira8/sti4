@@ -328,7 +328,8 @@
 <div class="overlay" id="resOverlay">
   <div class="modal">
     <h3><span>できあがり</span><button class="close" data-close="res" aria-label="閉じる">×</button></h3>
-    <p class="hint" style="margin:0 0 10px">画像を<b>長押し</b>（スマホ）または<b>右クリック</b>（PC）して保存してください。</p>
+    <div id="resActions" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"></div>
+    <p class="hint" id="resHint" style="margin:0 0 12px"></p>
     <div class="result-list" id="resList"></div>
   </div>
 </div>
@@ -609,7 +610,7 @@
     $('#sizeInfo').textContent = cur ? `原寸 ${cur.W}×${cur.H}px のまま保存されます` : '';
     $('#saveOne').disabled = !has;
     $('#saveAll').disabled = !has;
-    $('#saveAll').textContent = S.images.length > 1 ? `すべて保存（${S.images.length}枚・ZIP）` : 'すべて保存';
+    $('#saveAll').textContent = S.images.length > 1 ? (phoneFlow() ? `すべて保存（${S.images.length}枚）` : `すべて保存（${S.images.length}枚・ZIP）`) : 'すべて保存';
   }
 
   // ---------- preview ----------
@@ -780,21 +781,53 @@
     }
     showFallback(fallbackItems);
   }
+  // ----- phone-friendly saving -----
+  const inClaude = !!(window.claude && window.claude.use);
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const inAppBrowser = /Line\/|FBAN|FBAV|Instagram|Twitter|MicroMessenger|KAKAOTALK/i.test(navigator.userAgent);
+  let resUrls = [];
+  // Shows the finished images with buttons the person taps directly, so the
+  // browser counts the save as their own action (iPhone blocks it otherwise).
   function showFallback(items) {
-    const list = $('#resList'); list.innerHTML = '';
+    resUrls.forEach(u => URL.revokeObjectURL(u)); resUrls = [];
+    const list = $('#resList'), acts = $('#resActions'); list.innerHTML = ''; acts.innerHTML = '';
+    const files = items.map(({ name, blob }) => new File([blob], name, { type: blob.type || 'image/jpeg' }));
+    let canShare = false;
+    try { canShare = !!(navigator.canShare && navigator.canShare({ files })); } catch (e) {}
+    if (canShare && !inClaude) {
+      const b = document.createElement('button'); b.className = 'btn primary';
+      b.textContent = items.length > 1 ? `写真に保存（${items.length}枚）` : '写真に保存';
+      b.addEventListener('click', async () => {
+        try { await navigator.share({ files }); }
+        catch (e) { if (e && e.name !== 'AbortError') toast('共有メニューを開けませんでした。画像を長押しして保存してください', 4000); }
+      });
+      acts.appendChild(b);
+    }
     items.forEach(({ name, blob }) => {
+      const url = URL.createObjectURL(blob); resUrls.push(url);
       const f = document.createElement('figure'); f.style.margin = 0;
-      const img = document.createElement('img'); img.src = URL.createObjectURL(blob); img.alt = name;
-      const cap = document.createElement('figcaption'); cap.textContent = name;
+      const img = document.createElement('img'); img.src = url; img.alt = name;
+      const cap = document.createElement('figcaption');
+      if (!inClaude) {
+        const a = document.createElement('a'); a.href = url; a.download = name; a.textContent = '⬇ ' + name;
+        a.style.color = 'inherit'; cap.appendChild(a);
+      } else cap.textContent = name;
       f.append(img, cap); list.appendChild(f);
     });
+    let hint = canShare && !inClaude
+      ? '「写真に保存」を押して、出てきたメニューから「画像を保存」を選んでください。うまくいかないときは画像を<b>長押し</b>して保存できます。'
+      : '画像を<b>長押し</b>（スマホ）または<b>右クリック</b>（PC）して保存してください。';
+    if (inAppBrowser) hint += '<br><b>LINEやInstagramの中で開いていると保存できないことがあります。</b>右上のメニューから「Safariで開く」「ブラウザで開く」を選んでください。';
+    $('#resHint').innerHTML = hint;
     $('#resOverlay').classList.add('open');
   }
+  const phoneFlow = () => !inClaude && isMobile;
   function needSig() { if (!activeSig()) { toast('先にサインを登録・選択してください'); return true; } return false; }
   $('#saveOne').addEventListener('click', async () => {
     const im = S.images[S.current]; if (!im || needSig()) return;
     const btn = $('#saveOne'); btn.disabled = true;
-    try { const blob = await renderBlob(im); const name = outName(im); await saveFile(name, blob, [{ name, blob }]); }
+    try { const blob = await renderBlob(im); const name = outName(im); if (phoneFlow()) showFallback([{ name, blob }]); else await saveFile(name, blob, [{ name, blob }]); }
     catch (e) { toast('画像の書き出しに失敗しました'); }
     btn.disabled = false;
   });
@@ -807,7 +840,8 @@
         btn.textContent = `作成中… ${i + 1}/${S.images.length}`;
         const im = S.images[i]; items.push({ name: outName(im, used), blob: await renderBlob(im) });
       }
-      if (items.length === 1) await saveFile(items[0].name, items[0].blob, items);
+      if (phoneFlow()) showFallback(items);
+      else if (items.length === 1) await saveFile(items[0].name, items[0].blob, items);
       else if (window.JSZip) {
         btn.textContent = 'ZIPにまとめ中…';
         const zip = new JSZip(); items.forEach(it => zip.file(it.name, it.blob));
